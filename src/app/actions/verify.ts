@@ -3,9 +3,11 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { generateText } from 'ai';
 
-// Create Google provider instance with v1 API
+// Create Google provider with explicit v1 API endpoint
+// The baseURL must point to v1, not v1beta
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  baseURL: 'https://generativelanguage.googleapis.com/v1',
 });
 
 export async function verifyNews(headline: string) {
