@@ -13,7 +13,7 @@ const google = createGoogleGenerativeAI({
 export async function verifyNews(headline: string) {
   try {
     const { text } = await generateText({
-      model: google('gemini-1.5-flash'),
+      model: google('gemini-1.5-pro'),
       prompt: `Analyze the following for factual accuracy: "${headline}". 
       Give a Trust Score (0-100%) and a quick summary.`,
     });
