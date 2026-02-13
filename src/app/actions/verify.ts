@@ -3,9 +3,8 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { generateText } from 'ai';
 
-// Configure Google provider to use the stable v1 API
+// Create Google provider instance with v1 API
 const google = createGoogleGenerativeAI({
-  baseURL: 'https://generativelanguage.googleapis.com/v1',
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
@@ -19,7 +18,7 @@ export async function verifyNews(headline: string) {
 
     return text;
   } catch (error) {
-    console.error(error);
+    console.error('Verification error:', error);
     return `Connection Error: ${
       error instanceof Error ? error.message : 'Please check your API key'
     }`;
