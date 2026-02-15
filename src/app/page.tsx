@@ -112,7 +112,7 @@ Trust Score: 94
         {introSummary && (
           <div className={`col-span-12 mb-10 pb-10 border-b ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
             <h4 className="text-[12px] font-bold uppercase tracking-[0.2em] text-blue-500 mb-5">Summary</h4>
-            <p className={`text-xl sm:text-2xl font-medium leading-snug pr-0 sm:pr-6 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>"{introSummary}"</p>
+            <p className={`text-xl sm:text-2xl font-medium leading-snug italic pr-0 sm:pr-6 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>"{introSummary}"</p>
           </div>
         )}
 
@@ -160,10 +160,10 @@ Trust Score: 94
                 return isUrl ? (
                   <a key={idx} href={content} target="_blank" rel="noreferrer" className={`flex items-center gap-4 p-5 sm:p-6 border rounded-2xl transition-all ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-slate-100 hover:border-blue-500/30'}`}>
                     <span className="text-blue-500 text-lg flex-shrink-0">🔗</span>
-                    <span className={`text-[12px] sm:text-[15px] font-medium tracking-tight truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{content.split('/')[2]}</span>
+                    <span className={`text-[12px] sm:text-[13px] font-medium tracking-tight truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{content.split('/')[2]}</span>
                   </a>
                 ) : (
-                  <div key={idx} className={`border p-6 sm:p-8 rounded-2xl sm:rounded-3xl transition-all ${isDark ? 'bg-white/[0.02]' : 'bg-white'} ${borderColor}`}>
+                  <div key={idx} className={`border p-6 sm:p-8 rounded-2xl transition-all ${isDark ? 'bg-white/[0.02]' : 'bg-white'} ${borderColor}`}>
                     <div className="flex items-start gap-4 sm:gap-5">
                       <div className={`w-2 h-2 rounded-full ${dotColor} flex-shrink-0 mt-2`} />
                       <p className={`text-[1rem] sm:text-[1.05rem] leading-relaxed ${isPositive ? 'font-medium' : 'font-normal'} ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
@@ -188,7 +188,8 @@ Trust Score: 94
             <div className={`relative w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isDark ? 'border-white/20 text-white/70' : 'border-slate-300 text-slate-400'}`}>
               <span className="not-italic text-sm">V</span>
             </div>
-            <span className={`text-sm tracking-widest uppercase hidden sm:inline-block ${isDark ? 'text-white/60 font-light' : 'text-slate-400 font-medium'}`}>Verify.ai</span>
+            {/* Changed Verify.ai to Verify News */}
+            <span className={`text-sm tracking-widest uppercase hidden sm:inline-block ${isDark ? 'text-white/60 font-light' : 'text-slate-400 font-medium'}`}>Verify News</span>
           </div>
           
           <button onClick={() => setIsDark(!isDark)} className={`w-14 h-8 rounded-full border flex items-center px-1 transition-all ${isDark ? 'bg-blue-500 border-blue-400 justify-end' : 'bg-slate-200 border-slate-300 justify-start'}`}>
@@ -215,11 +216,11 @@ Trust Score: 94
                 />
               </div>
 
-              {/* DYNAMIC BUTTON SWAP: Clear vs Verify */}
+              {/* Increased font size for buttons (text-[14px] sm:text-[15px]) */}
               {data || status === 'limit' ? (
                 <button 
                   onClick={handleClear} 
-                  className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 rounded-2xl font-bold uppercase text-[12px] sm:text-[13px] tracking-[0.15em] transition-all active:scale-95 flex-shrink-0 ${isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+                  className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.15em] transition-all active:scale-95 flex-shrink-0 ${isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
                 >
                   Clear
                 </button>
@@ -227,7 +228,7 @@ Trust Score: 94
                 <button 
                   onClick={handleVerify} 
                   disabled={loading || !input} 
-                  className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 rounded-2xl font-bold uppercase text-[12px] sm:text-[13px] tracking-[0.15em] transition-all active:scale-95 flex-shrink-0 ${isDark ? 'bg-blue-500 text-white hover:bg-blue-400 disabled:bg-blue-500/50' : 'bg-slate-950 text-white hover:bg-blue-500 disabled:bg-slate-400'}`}
+                  className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.15em] transition-all active:scale-95 flex-shrink-0 ${isDark ? 'bg-blue-500 text-white hover:bg-blue-400 disabled:bg-blue-500/50' : 'bg-slate-950 text-white hover:bg-blue-500 disabled:bg-slate-400'}`}
                 >
                   {loading ? 'Analyzing...' : 'Verify'}
                 </button>
@@ -235,7 +236,7 @@ Trust Score: 94
             </div>
 
             {status === 'limit' && (
-              <div className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border animate-in fade-in slide-in-from-top-4 duration-700 ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800 shadow-sm'}`}>
+              <div className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border animate-in fade-in slide-in-from-top-4 duration-700 ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800 shadow-sm'}`}>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                   <span className="text-3xl">🪫</span>
                   <div>
@@ -251,7 +252,8 @@ Trust Score: 94
         {data && status !== 'limit' && (
           <div className="grid grid-cols-12 gap-8 sm:gap-10 animate-in fade-in slide-in-from-bottom-12 duration-1000">
             <div className="col-span-12 lg:col-span-4 h-fit lg:sticky lg:top-12">
-              <div className={`p-8 sm:p-12 rounded-[2rem] sm:rounded-3xl border transition-all ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>
+              {/* Tightened border radius to rounded-[1.5rem] sm:rounded-3xl */}
+              <div className={`p-8 sm:p-12 rounded-[1.5rem] sm:rounded-3xl border transition-all ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>
                 <span className="text-[11px] sm:text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em]">Trust Magnitude</span>
                 <div className={`mt-8 sm:mt-10 text-[100px] sm:text-[140px] font-bold leading-none tracking-tighter transition-colors duration-1000 ${
                   data.score > 70 ? 'text-blue-500' : 
@@ -279,7 +281,8 @@ Trust Score: 94
               </div>
             </div>
             
-            <div className={`col-span-12 lg:col-span-8 p-6 sm:p-8 md:p-16 rounded-[2rem] sm:rounded-[3rem] border transition-all backdrop-blur-sm ${
+            {/* Tightened border radius to rounded-[1.5rem] sm:rounded-3xl */}
+            <div className={`col-span-12 lg:col-span-8 p-6 sm:p-8 md:p-16 rounded-[1.5rem] sm:rounded-3xl border transition-all backdrop-blur-sm ${
               isDark ? 'bg-white/[0.01] border-white/5' : 'bg-white/30 border-white shadow-sm shadow-slate-200/20'
             }`}>
               {renderParsedAnalysis(data.analysis)}
