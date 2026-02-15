@@ -22,7 +22,7 @@ export default function Home() {
     setLoading(true);
     setStatus('idle');
 
-    const useMock = true; 
+    const useMock = false; 
 
     try {
       let resultText: string;
