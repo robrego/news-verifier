@@ -4,7 +4,6 @@ import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import * as cheerio from 'cheerio';
 
-// Helper function to check if input is a URL
 function isURL(str: string): boolean {
   try {
     const url = new URL(str);
@@ -14,7 +13,6 @@ function isURL(str: string): boolean {
   }
 }
 
-// Helper function to fetch and parse article content
 async function fetchArticleContent(url: string): Promise<{ title: string; content: string }> {
   try {
     const response = await fetch(url, {
@@ -39,13 +37,8 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
 
     let content = '';
     const contentSelectors = [
-      'article',
-      '[role="article"]',
-      '.article-content',
-      '.post-content',
-      '.entry-content',
-      'main',
-      '.content',
+      'article', '[role="article"]', '.article-content', 
+      '.post-content', '.entry-content', 'main', '.content',
     ];
 
     for (const selector of contentSelectors) {
@@ -98,10 +91,9 @@ export async function verifyNews(input: string) {
       }
     }
 
-    // Prompts updated to strictly require bullet points (•) for your frontend regex
+    // Notice we made the user prompt slightly simpler, because the heavy lifting is now in the System prompt below.
     const prompt = articleContent
       ? `Conduct a forensic analysis of this article. 
-         Today's Date: ${currentDate}
          URL: ${input}
          Title: ${articleTitle}
          Content: ${articleContent}
@@ -117,15 +109,12 @@ export async function verifyNews(input: string) {
          • [Identify manipulative techniques in bullet points, or state "• None identified".]
 
          **Supporting Evidence**
-         • [Provide 2-3 specific stats or numbers in bullet points.]
+         • [Provide 2-3 specific stats or numbers in bullet points found via search.]
 
          **Source Reliability & Verdict**
          • [Final judgment on the outlet and claim in bullet points.]`
       : `Conduct a forensic analysis of this headline.
-         Today's Date: ${currentDate}
          Headline: "${headline}"
-
-         If this is a Google News link, resolve the final destination via search.
 
          Structure your response EXACTLY with these headers:
 
@@ -143,17 +132,28 @@ export async function verifyNews(input: string) {
          **Source Reliability & Verdict**
          • [Assess the credibility of the claim using bullet points.]`;
 
-    // Retaining your "as any" overrides to prevent local strictness issues.
     const { text } = await generateText({
       model: google('gemini-2.5-flash'),
+      // 1. TEMPERATURE: 0.1 makes the AI highly analytical and non-creative
+      temperature: 0.1, 
+      // 2. MAX STEPS: Increased to 4 to ensure it has enough time to do multiple Google Searches if needed
+      maxSteps: 4, 
       tools: {
         googleSearch: google.tools.googleSearch({}) as any,
       },
-      maxSteps: 3, 
-      prompt: `
-      You MUST use the googleSearch tool to verify if this story is real news.
+      // 3. SYSTEM PROMPT: This is the strict persona instruction that prevents hallucinations
+      system: `You are an elite, ruthlessly objective forensic journalist and fact-checker. Your only job is to verify news claims using the googleSearch tool. 
       
-      ${prompt}`,
+      TODAY's DATE IS: ${currentDate}
+
+      STRICT RULES:
+      1. NEVER guess, assume, or invent information. If you cannot verify a claim via search, you must explicitly state that evidence is missing.
+      2. Pay strict attention to the timeline. Compare the article's claims to Today's Date.
+      3. Evaluate the domain reputation. Is it a known partisan blog, a satire site, or a tier-1 news organization?
+      4. Cross-reference claims. If a major global event is claimed but major wire services (AP, Reuters, Bloomberg, BBC) are NOT reporting it, the Trust Score must be severely penalized.
+      5. Only cite sources you actually found in your search results. Do not hallucinate source names.`,
+      
+      prompt: prompt,
     } as any);
 
     return text;
