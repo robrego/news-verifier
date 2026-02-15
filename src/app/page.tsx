@@ -143,7 +143,8 @@ Trust Score: 94
           const bullets = part.trim().split('•').filter(b => b.trim().length > 0);
           
           return (
-            <div key={i} className="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            /* DYNAMIC GRID FIX: Only use md:grid-cols-2 if there is more than 1 bullet! */
+            <div key={i} className={`col-span-12 grid grid-cols-1 ${bullets.length > 1 ? 'md:grid-cols-2' : ''} gap-4 sm:gap-5`}>
               {bullets.map((bullet, idx) => {
                 const content = bullet.trim();
                 const isUrl = content.startsWith('http');
@@ -240,8 +241,9 @@ Trust Score: 94
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                   <span className="text-3xl">🪫</span>
                   <div>
-                    <span className="block font-bold mb-1 uppercase tracking-wider text-[11px] opacity-80">AI Taking a Breather</span>
-                    <p className="text-[14px] sm:text-[15px] font-medium leading-relaxed">We've hit our API request limit for the moment! A lot of people are verifying news right now. Please wait a few minutes and try again.</p>
+                    {/* Updated the Title and the Paragraph text here */}
+                    <span className="block font-bold mb-1 uppercase tracking-wider text-[11px] opacity-80">Daily Limit Reached</span>
+                    <p className="text-[14px] sm:text-[15px] font-medium leading-relaxed">We've hit our free AI request quota for the day! Please try again tomorrow when the limits reset at midnight Pacific Time.</p>
                   </div>
                 </div>
               </div>
