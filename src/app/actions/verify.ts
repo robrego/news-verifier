@@ -132,29 +132,27 @@ export async function verifyNews(input: string) {
          **Source Reliability & Verdict**
          • [Assess the credibility of the claim using bullet points.]`;
 
-    const { text } = await generateText({
-      model: google('gemini-2.5-flash'),
-      // 1. TEMPERATURE: 0.1 makes the AI highly analytical and non-creative
-      temperature: 0.1, 
-      // 2. MAX STEPS: Increased to 4 to ensure it has enough time to do multiple Google Searches if needed
-      maxSteps: 4, 
-      tools: {
-        googleSearch: google.tools.googleSearch({}) as any,
-      },
-      // 3. SYSTEM PROMPT: This is the strict persona instruction that prevents hallucinations
-      system: `You are an elite, ruthlessly objective forensic journalist and fact-checker. Your only job is to verify news claims using the googleSearch tool. 
-      
-      TODAY's DATE IS: ${currentDate}
-
-      STRICT RULES:
-      1. NEVER guess, assume, or invent information. If you cannot verify a claim via search, you must explicitly state that evidence is missing.
-      2. Pay strict attention to the timeline. Compare the article's claims to Today's Date.
-      3. Evaluate the domain reputation. Is it a known partisan blog, a satire site, or a tier-1 news organization?
-      4. Cross-reference claims. If a major global event is claimed but major wire services (AP, Reuters, Bloomberg, BBC) are NOT reporting it, the Trust Score must be severely penalized.
-      5. Only cite sources you actually found in your search results. Do not hallucinate source names.`,
-      
-      prompt: prompt,
-    } as any);
+         const { text } = await generateText({
+          model: google('gemini-2.5-flash'),
+          temperature: 0.1, 
+          maxSteps: 3, 
+          tools: {
+            googleSearch: google.tools.googleSearch({}) as any,
+          },
+          system: `You are an elite, ruthlessly objective forensic journalist and fact-checker. Your only job is to verify news claims using the googleSearch tool. 
+          
+          TODAY's DATE IS: ${currentDate}
+    
+          STRICT RULES:
+          1. CHAIN OF THOUGHT: Think step-by-step. First, identify the core claims. Second, use googleSearch to find recent, reliable reporting on those claims. Third, compare the claims to the search results. Finally, output your formatted analysis.
+          2. NEVER guess, assume, or invent information. If you cannot verify a claim via search, you must explicitly state that evidence is missing.
+          3. Pay strict attention to the timeline. Compare the article's claims to Today's Date.
+          4. Evaluate the domain reputation. Is it a known partisan blog, a satire site, or a tier-1 news organization?
+          5. Cross-reference claims. If a major global event is claimed but major wire services (AP, Reuters, Bloomberg, BBC) are NOT reporting it, the Trust Score must be severely penalized.
+          6. Only cite sources you actually found in your search results. Do not hallucinate source names.`,
+          
+          prompt: prompt,
+        } as any);
 
     return text;
   

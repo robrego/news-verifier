@@ -22,6 +22,7 @@ export default function Home() {
     setLoading(true);
     setStatus('idle');
 
+    // Set to false to hit the live Gemini API
     const useMock = false; 
 
     try {
@@ -189,7 +190,6 @@ Trust Score: 94
             <div className={`relative w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isDark ? 'border-white/20 text-white/70' : 'border-slate-300 text-slate-400'}`}>
               <span className="not-italic text-sm">V</span>
             </div>
-            {/* Changed Verify.ai to Verify News */}
             <span className={`text-sm tracking-widest uppercase hidden sm:inline-block ${isDark ? 'text-white/60 font-light' : 'text-slate-400 font-medium'}`}>Verify News</span>
           </div>
           
@@ -211,13 +211,12 @@ Trust Score: 94
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
                   onKeyDown={(e) => e.key === 'Enter' && !data && handleVerify()}
-                  placeholder="Paste evidence URL..." 
+                  placeholder="Paste an article URL..." 
                   disabled={data !== null || status === 'limit'}
                   className="w-full pl-6 pr-6 py-4 sm:px-8 outline-none font-medium text-lg sm:text-xl bg-transparent disabled:opacity-50" 
                 />
               </div>
 
-              {/* Increased font size for buttons (text-[14px] sm:text-[15px]) */}
               {data || status === 'limit' ? (
                 <button 
                   onClick={handleClear} 
@@ -236,12 +235,17 @@ Trust Score: 94
               )}
             </div>
 
+            {/* AI Disclaimer */}
+            <p className={`mt-4 sm:mt-5 text-center text-[11px] sm:text-[12px] font-medium tracking-wide ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              Verify News can make mistakes. Always check critical information.
+            </p>
+
+            {/* Daily Limit Error Message */}
             {status === 'limit' && (
               <div className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border animate-in fade-in slide-in-from-top-4 duration-700 ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800 shadow-sm'}`}>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                   <span className="text-3xl">🪫</span>
                   <div>
-                    {/* Updated the Title and the Paragraph text here */}
                     <span className="block font-bold mb-1 uppercase tracking-wider text-[11px] opacity-80">Daily Limit Reached</span>
                     <p className="text-[14px] sm:text-[15px] font-medium leading-relaxed">We've hit our free AI request quota for the day! Please try again tomorrow when the limits reset at midnight Pacific Time.</p>
                   </div>
@@ -254,7 +258,6 @@ Trust Score: 94
         {data && status !== 'limit' && (
           <div className="grid grid-cols-12 gap-8 sm:gap-10 animate-in fade-in slide-in-from-bottom-12 duration-1000">
             <div className="col-span-12 lg:col-span-4 h-fit lg:sticky lg:top-12">
-              {/* Tightened border radius to rounded-[1.5rem] sm:rounded-3xl */}
               <div className={`p-8 sm:p-12 rounded-[1.5rem] sm:rounded-3xl border transition-all ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>
                 <span className="text-[11px] sm:text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em]">Trust Magnitude</span>
                 <div className={`mt-8 sm:mt-10 text-[100px] sm:text-[140px] font-bold leading-none tracking-tighter transition-colors duration-1000 ${
@@ -283,7 +286,6 @@ Trust Score: 94
               </div>
             </div>
             
-            {/* Tightened border radius to rounded-[1.5rem] sm:rounded-3xl */}
             <div className={`col-span-12 lg:col-span-8 p-6 sm:p-8 md:p-16 rounded-[1.5rem] sm:rounded-3xl border transition-all backdrop-blur-sm ${
               isDark ? 'bg-white/[0.01] border-white/5' : 'bg-white/30 border-white shadow-sm shadow-slate-200/20'
             }`}>
