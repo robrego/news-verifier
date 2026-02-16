@@ -22,7 +22,6 @@ export default function Home() {
     setLoading(true);
     setStatus('idle');
 
-    // Set to false to hit the live Gemini API
     const useMock = false; 
 
     try {
@@ -141,16 +140,38 @@ Trust Score: 94
             );
           }
 
-          const bullets = part.trim().split('•').filter(b => b.trim().length > 0);
-          
+          // BULLETPROOF PARSER: Split by newlines, bullet points, OR asterisks
+          const bullets = part.trim()
+          .split(/[\n•]+|\*(?=\s)/)
+          .map(b => b.replace(/^[•\-\*]\s*/, '').trim())
+          .filter(b => b.length > 0);          
           return (
-            /* DYNAMIC GRID FIX: Only use md:grid-cols-2 if there is more than 1 bullet! */
             <div key={i} className={`col-span-12 grid grid-cols-1 ${bullets.length > 1 ? 'md:grid-cols-2' : ''} gap-4 sm:gap-5`}>
               {bullets.map((bullet, idx) => {
                 const content = bullet.trim();
-                const isUrl = content.startsWith('http');
-                const lowerContent = content.toLowerCase();
                 
+                // BULLETPROOF URL PARSER: Finds any http/https link inside the text
+                const urlMatch = content.match(/(https?:\/\/[^\s]+)/);
+                const isUrl = urlMatch !== null;
+                
+                if (isUrl) {
+                  const finalUrl = urlMatch[0];
+                  let domainText = finalUrl;
+                  try {
+                    domainText = new URL(finalUrl).hostname.replace('www.', '');
+                  } catch (e) {
+                    domainText = finalUrl.split('/')[2] || finalUrl;
+                  }
+
+                  return (
+                    <a key={idx} href={finalUrl} target="_blank" rel="noreferrer" className={`flex items-center gap-4 p-5 sm:p-6 border rounded-2xl transition-all ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-slate-100 hover:border-blue-500/30'}`}>
+                      <span className="text-blue-500 text-lg flex-shrink-0">🔗</span>
+                      <span className={`text-[12px] sm:text-[13px] font-medium tracking-tight truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{domainText}</span>
+                    </a>
+                  );
+                }
+
+                const lowerContent = content.toLowerCase();
                 const isNegative = lowerContent.includes('missing') || lowerContent.includes('risk') || lowerContent.includes('fallacy') || lowerContent.includes('low');
                 const isPositive = lowerContent.includes('verified') || lowerContent.includes('credible') || lowerContent.includes('high') || lowerContent.includes('none identified');
 
@@ -159,12 +180,7 @@ Trust Score: 94
                   ? (isDark ? 'border-blue-500/30' : 'border-blue-500/20') 
                   : (isNegative ? (isDark ? 'border-rose-500/20' : 'border-rose-500/10') : (isDark ? 'border-white/5' : 'border-slate-100'));
 
-                return isUrl ? (
-                  <a key={idx} href={content} target="_blank" rel="noreferrer" className={`flex items-center gap-4 p-5 sm:p-6 border rounded-2xl transition-all ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-slate-100 hover:border-blue-500/30'}`}>
-                    <span className="text-blue-500 text-lg flex-shrink-0">🔗</span>
-                    <span className={`text-[12px] sm:text-[13px] font-medium tracking-tight truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{content.split('/')[2]}</span>
-                  </a>
-                ) : (
+                return (
                   <div key={idx} className={`border p-6 sm:p-8 rounded-2xl transition-all ${isDark ? 'bg-white/[0.02]' : 'bg-white'} ${borderColor}`}>
                     <div className="flex items-start gap-4 sm:gap-5">
                       <div className={`w-2 h-2 rounded-full ${dotColor} flex-shrink-0 mt-2`} />
@@ -211,7 +227,6 @@ Trust Score: 94
                   value={input} 
                   onChange={(e) => {
                     setInput(e.target.value);
-                    // SMART UX: Automatically clear old results if user starts typing a new URL
                     if (data || status === 'limit') {
                       setData(null);
                       setStatus('idle');
@@ -241,12 +256,10 @@ Trust Score: 94
               )}
             </div>
 
-            {/* AI Disclaimer */}
             <p className={`mt-4 sm:mt-5 text-center text-[11px] sm:text-[12px] font-medium tracking-wide ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
               Verify News can make mistakes. Always check critical information.
             </p>
 
-            {/* Daily Limit Error Message */}
             {status === 'limit' && (
               <div className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border animate-in fade-in slide-in-from-top-4 duration-700 ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800 shadow-sm'}`}>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">

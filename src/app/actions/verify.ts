@@ -13,7 +13,7 @@ function isURL(str: string): boolean {
   }
 }
 
-async function fetchArticleContent(url: string): Promise<{ title: string; content: string }> {
+async function fetchArticleContent(url: string): Promise<{ title: string; content: string; date: string }> {
   try {
     const response = await fetch(url, {
       headers: {
@@ -34,6 +34,13 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
       $('title').text() ||
       $('h1').first().text() ||
       'Article Title Not Found';
+
+    let date = 
+      $('meta[property="article:published_time"]').attr('content') ||
+      $('meta[name="pubdate"]').attr('content') ||
+      $('meta[name="publish-date"]').attr('content') ||
+      $('time').attr('datetime') ||
+      'Date Not Found';
 
     let content = '';
     const contentSelectors = [
@@ -58,7 +65,11 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
       content = content.substring(0, 5000) + '...';
     }
 
-    return { title: title.trim(), content: content.trim() || 'Content could not be extracted' };
+    return { 
+      title: title.trim(), 
+      content: content.trim() || 'Content could not be extracted',
+      date: date.trim()
+    };
   } catch (error) {
     throw new Error(`Failed to fetch article: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
@@ -70,89 +81,104 @@ export async function verifyNews(input: string) {
       return 'Error: GOOGLE_GENERATIVE_AI_API_KEY is not set in environment variables.';
     }
 
-    const currentDate = new Date().toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-
     let headline = input;
     let articleContent = '';
     let articleTitle = '';
+    let articleDate = '';
 
     if (isURL(input)) {
       try {
         const article = await fetchArticleContent(input);
         articleTitle = article.title;
         articleContent = article.content;
+        articleDate = article.date;
         headline = articleTitle;
       } catch (error) {
         return `Error fetching article: ${error instanceof Error ? error.message : 'Failed to fetch article content'}`;
       }
     }
 
-    // Notice we made the user prompt slightly simpler, because the heavy lifting is now in the System prompt below.
     const prompt = articleContent
-      ? `Conduct a forensic analysis of this article. 
+      ? `Conduct a forensic analysis of this article to determine its historical and factual accuracy.
          URL: ${input}
          Title: ${articleTitle}
+         Published Date: ${articleDate}
          Content: ${articleContent}
 
-         Structure your response EXACTLY with these headers:
+         Structure your response EXACTLY in this format:
+
+         [Write exactly ONE short sentence summarizing your findings]
 
          Trust Score: [Number 0-100 only]
 
          **Factual Consensus**
-         • [Provide bullet points starting with "• " comparing this to verified reports.]
+         • [First short bullet point confirming if this event actually happened]
+         • [Second short bullet point with extra context]
 
          **Logical Fallacies Detected**
-         • [Identify manipulative techniques in bullet points, or state "• None identified".]
+         • [First short bullet point identifying manipulation, or "None identified"]
+         • [Second short bullet point if applicable]
 
          **Supporting Evidence**
-         • [Provide 2-3 specific stats or numbers in bullet points found via search.]
+         • [First short bullet point with specific stats/numbers]
+         • [Second short bullet point with specific stats/numbers]
 
          **Source Reliability & Verdict**
-         • [Final judgment on the outlet and claim in bullet points.]`
+         • [First short bullet point on the outlet's credibility]
+         • [Second short bullet point on the final verdict]
+
+         **Sources Investigated**
+         • [Full Article URL 1 - MUST NOT CONTAIN GOOGLE.COM]
+         • [Full Article URL 2 - MUST NOT CONTAIN GOOGLE.COM]
+         • [Full Article URL 3 - MUST NOT CONTAIN GOOGLE.COM]`
       : `Conduct a forensic analysis of this headline.
          Headline: "${headline}"
 
-         Structure your response EXACTLY with these headers:
+         Structure your response EXACTLY in this format:
+
+         [Write exactly ONE short sentence summarizing your findings]
 
          Trust Score: [Number 0-100 only]
 
          **Factual Consensus**
-         • [Verify if this headline aligns with known facts using bullet points starting with "• ".]
+         • [First short bullet point confirming if this event actually happened]
+         • [Second short bullet point with extra context]
 
          **Logical Fallacies Detected**
-         • [Identify "Loaded Language" or "Clickbait" techniques using bullet points.]
+         • [First short bullet point identifying manipulation, or "None identified"]
+         • [Second short bullet point if applicable]
 
          **Supporting Evidence**
-         • [Provide specific numbers or cross-reference counts found via search using bullet points.]
+         • [First short bullet point with specific stats/numbers]
+         • [Second short bullet point with specific stats/numbers]
 
          **Source Reliability & Verdict**
-         • [Assess the credibility of the claim using bullet points.]`;
+         • [First short bullet point on the outlet's credibility]
+         • [Second short bullet point on the final verdict]
 
-         const { text } = await generateText({
-          model: google('gemini-2.5-flash'),
-          temperature: 0.1, 
-          maxSteps: 3, 
-          tools: {
-            googleSearch: google.tools.googleSearch({}) as any,
-          },
-          system: `You are an elite, ruthlessly objective forensic journalist and fact-checker. Your only job is to verify news claims using the googleSearch tool. 
-          
-          TODAY's DATE IS: ${currentDate}
-    
-          STRICT RULES:
-          1. CHAIN OF THOUGHT: Think step-by-step. First, identify the core claims. Second, use googleSearch to find recent, reliable reporting on those claims. Third, compare the claims to the search results. Finally, output your formatted analysis.
-          2. NEVER guess, assume, or invent information. If you cannot verify a claim via search, you must explicitly state that evidence is missing.
-          3. Pay strict attention to the timeline. Compare the article's claims to Today's Date.
-          4. Evaluate the domain reputation. Is it a known partisan blog, a satire site, or a tier-1 news organization?
-          5. Cross-reference claims. If a major global event is claimed but major wire services (AP, Reuters, Bloomberg, BBC) are NOT reporting it, the Trust Score must be severely penalized.
-          6. Only cite sources you actually found in your search results. Do not hallucinate source names.`,
-          
-          prompt: prompt,
-        } as any);
+         **Sources Investigated**
+         • [Full Article URL 1 - MUST NOT CONTAIN GOOGLE.COM]
+         • [Full Article URL 2 - MUST NOT CONTAIN GOOGLE.COM]
+         • [Full Article URL 3 - MUST NOT CONTAIN GOOGLE.COM]`;
+
+    const { text } = await generateText({
+      model: google('gemini-2.5-flash'),
+      temperature: 0.1, 
+      maxSteps: 3, 
+      tools: {
+        googleSearch: google.tools.googleSearch({}) as any,
+      },
+      system: `You are an elite, ruthlessly objective forensic journalist. Verify claims using the googleSearch tool. 
+
+      STRICT RULES:
+      1. FORMATTING: Use extremely concise, punchy statements (MAXIMUM 15 WORDS PER BULLET). Do not write long sentences.
+      2. URLS ONLY: Under "Sources Investigated", output EXACTLY 3 distinct, full URLs from specific news articles you found (e.g., https://apnews.com/...). NEVER output generic search links (Ban ANY URL containing "google.com").
+      3. TEMPORAL CONTEXT: Evaluate the facts based on when the events occurred. If verifying a past event, search to confirm if the event historically happened. Do NOT penalize an article or call it "fabricated" just because the event is not happening currently in 2026.
+      4. NEVER guess or invent information. 
+      5. Cross-reference claims using major wire services (AP, Reuters, Bloomberg, BBC).`,
+      
+      prompt: prompt,
+    } as any);
 
     return text;
   
