@@ -203,8 +203,8 @@ Trust Score: 94
       <div className="max-w-7xl mx-auto">
         <header className="mb-12 sm:mb-20 flex justify-between items-center">
           <div className="flex items-center gap-3 font-semibold tracking-wide">
-            <div className={`relative w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isDark ? 'border-white/20 text-white/70' : 'border-slate-300 text-slate-400'}`}>
-              <span className="not-italic text-sm">V</span>
+            <div className={`relative w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center border transition-all ${isDark ? 'border-white/20 text-white/70' : 'border-slate-300 text-slate-400'}`}>
+              <span className="not-italic text-sm leading-none mt-[1px]">V</span>
             </div>
             <span className={`text-sm tracking-widest uppercase hidden sm:inline-block ${isDark ? 'text-white/60 font-light' : 'text-slate-400 font-medium'}`}>Verify News</span>
           </div>
