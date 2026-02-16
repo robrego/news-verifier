@@ -209,11 +209,17 @@ Trust Score: 94
               <div className="relative w-full flex-grow flex items-center">
                 <input 
                   value={input} 
-                  onChange={(e) => setInput(e.target.value)} 
-                  onKeyDown={(e) => e.key === 'Enter' && !data && handleVerify()}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    // SMART UX: Automatically clear old results if user starts typing a new URL
+                    if (data || status === 'limit') {
+                      setData(null);
+                      setStatus('idle');
+                    }
+                  }} 
+                  onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
                   placeholder="Paste an article URL..." 
-                  disabled={data !== null || status === 'limit'}
-                  className="w-full pl-6 pr-6 py-4 sm:px-8 outline-none font-medium text-lg sm:text-xl bg-transparent disabled:opacity-50" 
+                  className="w-full pl-6 pr-6 py-4 sm:px-8 outline-none font-medium text-lg sm:text-xl bg-transparent" 
                 />
               </div>
 
