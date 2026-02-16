@@ -81,6 +81,12 @@ export async function verifyNews(input: string) {
       return 'Error: GOOGLE_GENERATIVE_AI_API_KEY is not set in environment variables.';
     }
 
+    const currentDate = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
     let headline = input;
     let articleContent = '';
     let articleTitle = '';
@@ -169,13 +175,15 @@ export async function verifyNews(input: string) {
         googleSearch: google.tools.googleSearch({}) as any,
       },
       system: `You are an elite, ruthlessly objective forensic journalist. Verify claims using the googleSearch tool. 
+      
+      TODAY'S DATE: ${currentDate}
 
       STRICT RULES:
-      1. FORMATTING: Use extremely concise, punchy statements (MAXIMUM 15 WORDS PER BULLET). Do not write long sentences.
-      2. URLS ONLY: Under "Sources Investigated", output EXACTLY 3 distinct, full URLs from specific news articles you found (e.g., https://apnews.com/...). NEVER output generic search links (Ban ANY URL containing "google.com").
-      3. TEMPORAL CONTEXT: Evaluate the facts based on when the events occurred. If verifying a past event, search to confirm if the event historically happened. Do NOT penalize an article or call it "fabricated" just because the event is not happening currently in 2026.
-      4. NEVER guess or invent information. 
-      5. Cross-reference claims using major wire services (AP, Reuters, Bloomberg, BBC).`,
+      1. MANDATORY SEARCH: You MUST use the googleSearch tool to investigate the core claims before answering. Your internal knowledge is outdated. Treat every claim as potential breaking news that requires live verification.
+      2. FORMATTING: Use extremely concise, punchy statements (MAXIMUM 15 WORDS PER BULLET). Do not write long sentences.
+      3. URLS ONLY: Under "Sources Investigated", output EXACTLY 3 distinct, full URLs from specific news articles you found (e.g., https://apnews.com/...). NEVER output generic search links (Ban ANY URL containing "google.com").
+      4. TEMPORAL CONTEXT: Evaluate the facts based on when the events occurred. If verifying a past event, search to confirm if the event historically happened.
+      5. NEVER guess or invent information. Cross-reference claims using major wire services (AP, Reuters, Bloomberg, BBC).`,
       
       prompt: prompt,
     } as any);
