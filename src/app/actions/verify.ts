@@ -183,7 +183,8 @@ export async function verifyNews(input: string) {
       2. FORMATTING: Use extremely concise, punchy statements (MAXIMUM 15 WORDS PER BULLET). Do not write long sentences.
       3. URLS ONLY: Under "Sources Investigated", output EXACTLY 3 distinct, full URLs from specific news articles you found (e.g., https://apnews.com/...). NEVER output generic search links (Ban ANY URL containing "google.com").
       4. TEMPORAL CONTEXT: Evaluate the facts based on when the events occurred. If verifying a past event, search to confirm if the event historically happened.
-      5. NEVER guess or invent information. Cross-reference claims using major wire services (AP, Reuters, Bloomberg, BBC).`,
+      5. NEVER guess or invent information. Cross-reference claims using major wire services (AP, Reuters, Bloomberg, BBC).
+      6. THE ESCAPE HATCH: If you cannot find independent, tier-1 sources to confirm a specific detail, you MUST output: "Inconclusive: Insufficient live data to verify." Do not attempt to guess or fill in the blanks.`,
       
       prompt: prompt,
     } as any);
