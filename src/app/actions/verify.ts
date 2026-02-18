@@ -1,8 +1,5 @@
 'use server'
 
-export const maxDuration = 60;
-
-// 1. We imported Groq instead of Google!
 import { groq } from '@ai-sdk/groq';
 import { generateText, tool } from 'ai';
 import { z } from 'zod';
@@ -84,7 +81,6 @@ export async function verifyNews(input: string) {
   console.log('1. User Input:', input);
 
   try {
-    // 2. We are checking for the Groq API key now
     if (!process.env.GROQ_API_KEY) {
       return 'Error: GROQ_API_KEY is not set in environment variables.';
     }
@@ -113,8 +109,10 @@ export async function verifyNews(input: string) {
         headline = articleTitle;
         console.log('✅ Scrape successful. Title:', articleTitle);
       } catch (error) {
-        console.error('⚠️ Scraper blocked by website:', error);
-        return `Error fetching article: ${error instanceof Error ? error.message : 'Failed to fetch article content'}`;
+        // FIX: Gracefully fallback to Brave Search if Vercel gets IP blocked!
+        console.error('⚠️ Scraper blocked by website. Falling back to Search...', error);
+        headline = input; 
+        articleContent = ''; 
       }
     } else {
       console.log('2. Input is raw text. Skipping scraper.');
@@ -185,7 +183,6 @@ export async function verifyNews(input: string) {
 
     console.log('3. Sending prompt to Groq API...');
     const { text } = await generateText({
-      // 3. Goodbye Gemini, hello Llama 3!
       model: groq('llama-3.3-70b-versatile'),
       temperature: 0.1, 
       maxSteps: 3, 
@@ -230,7 +227,7 @@ export async function verifyNews(input: string) {
       
       CRITICAL TEMPORAL ANCHOR & REALITY CHECK:
       TODAY'S DATE IS EXACTLY: ${currentDate}. 
-      The year is ${new Date().getFullYear()}. Your internal knowledge of world leaders, elections, and geopolitical events is COMPLETELY OUTDATED. Major global shifts (including the results of the 2024 US Presidential Election) have occurred since your training cutoff. 
+      The year is ${new Date().getFullYear()}. Your internal knowledge of world leaders, elections, and geopolitical events is COMPLETELY OUTDATED. Major global shifts have occurred since your training cutoff. 
       If an article states a specific person is President, DO NOT reject it based on your memory. YOU MUST TRUST THE BRAVE SEARCH LIVE DATA 100%.
 
       STRICT RULES:
@@ -249,10 +246,7 @@ export async function verifyNews(input: string) {
       throw new Error('Groq returned an empty response.');
     }
 
-    console.log('4. AI Generation Complete! Raw output:');
-    console.log('--------------------------------------------------');
-    console.log(text);
-    console.log('--------------------------------------------------\n');
+    console.log('4. AI Generation Complete!');
     return text;
   
   } catch (error) {
