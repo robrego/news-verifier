@@ -80,7 +80,7 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
 }
 
 export async function verifyNews(input: string) {
-  console.log('\n--- 🚀 NEW VERIFICATION REQUEST ---');
+  console.log('\n--- 🚀 GROQ VERIFICATION REQUEST ---');
   console.log('1. User Input:', input);
 
   try {
