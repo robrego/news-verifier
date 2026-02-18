@@ -1,5 +1,7 @@
 'use server'
 
+export const maxDuration = 60;
+
 // 1. We imported Groq instead of Google!
 import { groq } from '@ai-sdk/groq';
 import { generateText, tool } from 'ai';
