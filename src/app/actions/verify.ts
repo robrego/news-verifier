@@ -23,7 +23,7 @@ function isURL(str: string): boolean {
   }
 }
 
-// NEW: Smart URL Parser to salvage blocked scrapes
+// Smart URL Parser to salvage blocked scrapes
 function extractHeadlineFromURL(url: string): string {
   try {
     const urlObj = new URL(url);
@@ -73,7 +73,7 @@ async function isLinkAlive(url: string): Promise<boolean> {
 async function fetchArticleContent(url: string): Promise<{ title: string; content: string; date: string }> {
   try {
     const response = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' },
       signal: AbortSignal.timeout(SCRAPER_TIMEOUT_MS)
     });
 
@@ -83,6 +83,13 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
     const $ = cheerio.load(html);
 
     let title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'Title Not Found';
+    
+    // 🚨 THE FIX: Detect silent firewalls that return 200 OK
+    const blockedKeywords = ['just a moment', 'attention required', 'cloudflare', 'security check', 'robot or human', 'access denied'];
+    if (blockedKeywords.some(kw => title.toLowerCase().includes(kw))) {
+      throw new Error('Silent Firewall Block Detected');
+    }
+
     let date = $('meta[property="article:published_time"]').attr('content') || $('time').attr('datetime') || 'Date Not Found';
 
     $('script, style, nav, footer, aside, .ad, .advertisement, iframe, header').remove();
@@ -108,6 +115,7 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
       date: date.trim()
     };
   } catch (error) {
+    // This will successfully trigger our URL Parser fallback!
     throw new Error(`Scraper failed`);
   }
 }
@@ -176,7 +184,6 @@ export async function verifyNews(input: string) {
         headline = articleTitle;
         console.log('✅ Scrape successful. Title:', articleTitle);
       } catch (error) {
-        // FIX: Extract readable headline from URL instead of searching raw URL
         headline = extractHeadlineFromURL(input);
         console.log(`⚠️ Scraper blocked. Extracted fallback headline: "${headline}"`);
       }
