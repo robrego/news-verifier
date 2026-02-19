@@ -74,6 +74,7 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
   try {
     const response = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' },
+      cache: 'no-store', // 🚨 THE FIX: Never cache the scraper
       signal: AbortSignal.timeout(SCRAPER_TIMEOUT_MS)
     });
 
@@ -84,7 +85,7 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
 
     let title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'Title Not Found';
     
-    // 🚨 THE FIX: Detect silent firewalls that return 200 OK
+    // Detect silent firewalls that return 200 OK
     const blockedKeywords = ['just a moment', 'attention required', 'cloudflare', 'security check', 'robot or human', 'access denied'];
     if (blockedKeywords.some(kw => title.toLowerCase().includes(kw))) {
       throw new Error('Silent Firewall Block Detected');
@@ -115,7 +116,7 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
       date: date.trim()
     };
   } catch (error) {
-    // This will successfully trigger our URL Parser fallback!
+    // This will successfully trigger our URL Parser fallback
     throw new Error(`Scraper failed`);
   }
 }
@@ -128,6 +129,7 @@ async function fetchLiveSearchData(query: string) {
         'Accept': 'application/json',
         'X-Subscription-Token': process.env.BRAVE_API_KEY!,
       },
+      cache: 'no-store', // 🚨 THE FIX: Never cache search results
       signal: AbortSignal.timeout(6000) 
     });
     
@@ -147,9 +149,7 @@ async function fetchLiveSearchData(query: string) {
 
     let verified = aliveChecks.filter(r => r !== null).slice(0, 3);
     
-    // 🚨 THE VERCEL FIX: The Safety Net
-    // If Vercel's network drops all connections and kills our verified array,
-    // fallback to the top 3 raw Brave results so the app doesn't say "Inconclusive"!
+    // The Vercel Safety Net
     if (verified.length === 0 && validCandidates.length > 0) {
       console.log(`   [Brave] ⚠️ All links timed out on Vercel. Falling back to raw search results.`);
       verified = validCandidates.slice(0, 3);
@@ -173,7 +173,10 @@ export async function verifyNews(input: string) {
   console.log('1. User Input:', input);
 
   try {
-    if (!process.env.GROQ_API_KEY || !process.env.BRAVE_API_KEY) return 'Error: API keys missing.';
+    if (!process.env.GROQ_API_KEY || !process.env.BRAVE_API_KEY) {
+      console.log('🚨 Missing API Keys in Environment!');
+      return 'Error: API keys missing. Check your Vercel Environment Variables.';
+    }
 
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
