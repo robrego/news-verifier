@@ -1,10 +1,19 @@
 'use server'
 
 import { groq } from '@ai-sdk/groq';
-import { generateText, tool } from 'ai';
-import { z } from 'zod';
+import { generateText } from 'ai';
 import * as cheerio from 'cheerio';
 
+// ==========================================
+// 1. TIMEOUTS & BLACKLISTS
+// ==========================================
+const SCRAPER_TIMEOUT_MS = 6000;
+const PING_TIMEOUT_MS = 2500;
+const BLACKLISTED_DOMAINS = /change\.org|petition|museum|facebook\.com|twitter\.com|x\.com|instagram\.com/i;
+
+// ==========================================
+// 2. HELPER FUNCTIONS
+// ==========================================
 function isURL(str: string): boolean {
   try {
     const url = new URL(str);
@@ -14,93 +23,136 @@ function isURL(str: string): boolean {
   }
 }
 
+// UPGRADED: Smart Link Checker that bypasses basic firewalls
+async function isLinkAlive(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { 
+      method: 'HEAD', 
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml'
+      },
+      signal: AbortSignal.timeout(PING_TIMEOUT_MS),
+      next: { revalidate: 3600 } 
+    });
+
+    // If the page is explicitly deleted or gone, kill it.
+    if (response.status === 404 || response.status === 410) {
+      console.log(`   [Link Checker] ❌ 404/410 Dead Link: ${url}`);
+      return false;
+    }
+
+    // If it's 200 (OK), 3xx (Redirect), 403 (Firewall), or 405 (HEAD blocked), 
+    // it means the URL actually exists on the internet! Keep it.
+    return true;
+
+  } catch {
+    // If it completely times out or fails to connect, kill it.
+    console.log(`   [Link Checker] ❌ Timeout/Blocked: ${url}`);
+    return false;
+  }
+}
+
 async function fetchArticleContent(url: string): Promise<{ title: string; content: string; date: string }> {
   try {
     const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      signal: AbortSignal.timeout(SCRAPER_TIMEOUT_MS)
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch article: ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    let title = 
-      $('meta[property="og:title"]').attr('content') ||
-      $('meta[name="twitter:title"]').attr('content') ||
-      $('title').text() ||
-      $('h1').first().text() ||
-      'Article Title Not Found';
+    let title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'Title Not Found';
+    let date = $('meta[property="article:published_time"]').attr('content') || $('time').attr('datetime') || 'Date Not Found';
 
-    let date = 
-      $('meta[property="article:published_time"]').attr('content') ||
-      $('meta[name="pubdate"]').attr('content') ||
-      $('meta[name="publish-date"]').attr('content') ||
-      $('time').attr('datetime') ||
-      'Date Not Found';
+    $('script, style, nav, footer, aside, .ad, .advertisement, iframe, header').remove();
 
     let content = '';
-    const contentSelectors = [
-      'article', '[role="article"]', '.article-content', 
-      '.post-content', '.entry-content', 'main', '.content',
-    ];
+    const contentSelectors = ['article', '[role="article"]', '.article-content', 'main', '.content'];
 
     for (const selector of contentSelectors) {
       const element = $(selector).first();
       if (element.length > 0) {
-        element.find('script, style, nav, footer, aside, .ad, .advertisement').remove();
-        content = element.text().trim();
+        content = element.text().replace(/\s+/g, ' ').trim();
         if (content.length > 200) break;
       }
     }
 
     if (!content || content.length < 200) {
-      content = $('p').map((_, el) => $(el).text()).get().join(' ').trim();
-    }
-
-    if (content.length > 5000) {
-      content = content.substring(0, 5000) + '...';
+      content = $('p').map((_, el) => $(el).text()).get().join(' ').replace(/\s+/g, ' ').trim();
     }
 
     return { 
       title: title.trim(), 
-      content: content.trim() || 'Content could not be extracted',
+      content: content.substring(0, 5000).trim(),
       date: date.trim()
     };
   } catch (error) {
-    throw new Error(`Failed to fetch article: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Scraper failed`);
   }
 }
 
+// Explicit Web Search Function
+async function fetchLiveSearchData(query: string) {
+  console.log(`\n   [Brave] 🔎 Searching live web for: "${query}"`);
+  try {
+    const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=20`, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Subscription-Token': process.env.BRAVE_API_KEY!,
+      },
+      signal: AbortSignal.timeout(5000)
+    });
+    
+    if (!res.ok) throw new Error('Brave API failed');
+
+    const data = await res.json();
+    const rawResults = data.web?.results || [];
+
+    const validCandidates = rawResults.filter((r: any) => !BLACKLISTED_DOMAINS.test(r.url));
+    
+    const aliveChecks = await Promise.all(
+      validCandidates.slice(0, 10).map(async (r: any) => {
+        const isAlive = await isLinkAlive(r.url);
+        return isAlive ? r : null;
+      })
+    );
+
+    const verified = aliveChecks.filter(r => r !== null).slice(0, 3);
+    console.log(`   [Brave] ✅ Found ${verified.length} verified, live URLs.`);
+    
+    // Format the results so the AI can read them easily
+    let formattedData = verified.map((v, i) => `Source ${i + 1}:\nTitle: ${v.title}\nURL: ${v.url}\nSnippet: ${v.description}`).join('\n\n');
+    return formattedData || "No live data found.";
+  } catch (error) {
+    console.error(`   [Brave] ❌ Search error:`, error);
+    return "Live search failed. Unable to verify current events.";
+  }
+}
+
+// ==========================================
+// 3. MAIN SERVER ACTION
+// ==========================================
 export async function verifyNews(input: string) {
-  console.log('\n--- 🚀 GROQ VERIFICATION REQUEST ---');
+  console.log('\n--- 🚀 VERIFICATION PIPELINE START ---');
   console.log('1. User Input:', input);
 
   try {
-    if (!process.env.GROQ_API_KEY) {
-      return 'Error: GROQ_API_KEY is not set in environment variables.';
-    }
-    if (!process.env.BRAVE_API_KEY) {
-      return 'Error: BRAVE_API_KEY is not set in environment variables.';
-    }
+    if (!process.env.GROQ_API_KEY || !process.env.BRAVE_API_KEY) return 'Error: API keys missing.';
 
-    const currentDate = new Date().toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     let headline = input;
     let articleContent = '';
     let articleTitle = '';
     let articleDate = '';
 
+    // STEP 1: SCRAPE (If URL)
     if (isURL(input)) {
-      console.log('2. Input is a URL. Attempting to scrape...');
+      console.log('2. Scraper: Attempting to read URL...');
       try {
         const article = await fetchArticleContent(input);
         articleTitle = article.title;
@@ -109,149 +161,76 @@ export async function verifyNews(input: string) {
         headline = articleTitle;
         console.log('✅ Scrape successful. Title:', articleTitle);
       } catch (error) {
-        // FIX: Gracefully fallback to Brave Search if Vercel gets IP blocked!
-        console.error('⚠️ Scraper blocked by website. Falling back to Search...', error);
-        headline = input; 
-        articleContent = ''; 
+        console.log('⚠️ Scraper blocked. Proceeding with raw URL.');
       }
     } else {
-      console.log('2. Input is raw text. Skipping scraper.');
+      console.log('2. Scraper: Input is text. Skipping.');
     }
 
-    const prompt = articleContent
-      ? `Conduct a forensic analysis of this article to determine its historical and factual accuracy.
-         URL: ${input}
-         Title: ${articleTitle}
-         Published Date: ${articleDate}
-         Content: ${articleContent}
+    // STEP 2: MANDATORY LIVE SEARCH (Retrieve)
+    console.log('3. Search: Fetching cross-reference data...');
+    const liveSearchContext = await fetchLiveSearchData(headline);
 
-         Structure your response EXACTLY in this format:
+    // STEP 3: AI GENERATION (Generate)
+    console.log('4. AI: Sending consolidated data to Groq...');
+    
+    const promptData = articleContent
+      ? `Conduct a forensic analysis of this article to determine its historical and factual accuracy.\n\nArticle Title: ${articleTitle}\nPublished Date: ${articleDate}\nArticle Content: ${articleContent}`
+      : `Conduct a forensic analysis of this headline to determine its historical and factual accuracy.\n\nHeadline: "${headline}"`;
 
-         [Write exactly ONE short sentence summarizing your findings]
-
-         Trust Score: [Number 0-100 only]
-
-         **Factual Consensus**
-         • [First short bullet point confirming if this event actually happened]
-         • [Second short bullet point with extra context]
-
-         **Logical Fallacies Detected**
-         • [First short bullet point identifying manipulation, or "None identified"]
-         • [Second short bullet point if applicable]
-
-         **Supporting Evidence**
-         • [First short bullet point with specific stats/numbers]
-         • [Second short bullet point with specific stats/numbers]
-
-         **Source Reliability & Verdict**
-         • [First short bullet point on the outlet's credibility]
-         • [Second short bullet point on the final verdict]
-
-         **Sources Investigated**
-         • [Full Article URL 1 - MUST NOT CONTAIN SEARCH ENGINE LINKS]
-         • [Full Article URL 2 - MUST NOT CONTAIN SEARCH ENGINE LINKS]
-         • [Full Article URL 3 - MUST NOT CONTAIN SEARCH ENGINE LINKS]`
-      : `Conduct a forensic analysis of this headline.
-         Headline: "${headline}"
-
-         Structure your response EXACTLY in this format:
-
-         [Write exactly ONE short sentence summarizing your findings]
-
-         Trust Score: [Number 0-100 only]
-
-         **Factual Consensus**
-         • [First short bullet point confirming if this event actually happened]
-         • [Second short bullet point with extra context]
-
-         **Logical Fallacies Detected**
-         • [First short bullet point identifying manipulation, or "None identified"]
-         • [Second short bullet point if applicable]
-
-         **Supporting Evidence**
-         • [First short bullet point with specific stats/numbers]
-         • [Second short bullet point with specific stats/numbers]
-
-         **Source Reliability & Verdict**
-         • [First short bullet point on the outlet's credibility]
-         • [Second short bullet point on the final verdict]
-
-         **Sources Investigated**
-         • [Full Article URL 1 - MUST NOT CONTAIN SEARCH ENGINE LINKS]
-         • [Full Article URL 2 - MUST NOT CONTAIN SEARCH ENGINE LINKS]
-         • [Full Article URL 3 - MUST NOT CONTAIN SEARCH ENGINE LINKS]`;
-
-    console.log('3. Sending prompt to Groq API...');
     const { text } = await generateText({
       model: groq('llama-3.3-70b-versatile'),
       temperature: 0.1, 
-      maxSteps: 3, 
-      tools: {
-        braveSearch: tool({
-          description: 'Search the live web for up-to-date news, facts, and articles to verify claims.',
-          parameters: z.object({
-            query: z.string().describe('The search query to look up facts, news, or events.'),
-          }),
-          // @ts-ignore
-          execute: async (args: any) => {
-            let searchQuery = args?.query;
-            if (!searchQuery || searchQuery === 'undefined') {
-              searchQuery = typeof args === 'string' ? args : headline;
-            }
-
-            console.log(`   🔎 AI activated Brave Tool. Searching for: "${searchQuery}"`);
-            const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(searchQuery)}&count=5`, {
-              headers: {
-                'Accept': 'application/json',
-                'X-Subscription-Token': process.env.BRAVE_API_KEY!,
-              },
-            });
-            
-            if (!res.ok) {
-              console.error('   ❌ Brave API Error:', res.statusText);
-              throw new Error(`Brave Search failed: ${res.statusText}`);
-            }
-
-            const data = await res.json();
-            console.log(`   ✅ Brave returned ${data.web?.results?.length || 0} results.`);
-            return data.web?.results?.map((r: any) => ({
-              title: r.title,
-              url: r.url,
-              snippet: r.description,
-              date: r.age || 'Unknown date',
-            })) || [];
-          },
-        }) as any,
-      },
-      system: `You are an elite, ruthlessly objective forensic journalist. Verify claims using the braveSearch tool. 
+      system: `You are an elite, ruthlessly objective forensic journalist.
       
       CRITICAL TEMPORAL ANCHOR & REALITY CHECK:
       TODAY'S DATE IS EXACTLY: ${currentDate}. 
-      The year is ${new Date().getFullYear()}. Your internal knowledge of world leaders, elections, and geopolitical events is COMPLETELY OUTDATED. Major global shifts have occurred since your training cutoff. 
-      If an article states a specific person is President, DO NOT reject it based on your memory. YOU MUST TRUST THE BRAVE SEARCH LIVE DATA 100%.
+      The year is ${new Date().getFullYear()}. Your internal knowledge is completely outdated.
+
+      I have performed a live web search for you. You MUST base your verification on the "LIVE WEB SEARCH RESULTS" provided in the prompt. 
 
       STRICT RULES:
-      1. MANDATORY SEARCH: You MUST use the braveSearch tool to investigate the core claims before answering. NEVER rely on your internal database.
+      1. ONLY cite URLs provided directly in the LIVE WEB SEARCH RESULTS. NEVER hallucinate URLs or rely on your internal training data.
       2. FORMATTING: Use extremely concise, punchy statements (MAXIMUM 15 WORDS PER BULLET). Do not write long sentences.
-      3. URLS ONLY: Under "Sources Investigated", output EXACTLY 3 distinct, full URLs. NEVER output generic search links.
-      4. TEMPORAL CONTEXT: Evaluate facts based on TODAY'S DATE. 
-      5. SUSPEND DISBELIEF: Assume YOUR TRAINING DATA IS WRONG and the live web search is right.
-      6. THE ESCAPE HATCH: If you cannot find independent sources, output: "Inconclusive: Insufficient live data to verify."
-      7. NEVER USE THE WORD "ERROR": Under NO circumstances are you allowed to generate a response that starts with the word "Error".`,
+      3. URLS ONLY: Under "Sources Investigated", ONLY output the URLs provided in the LIVE WEB SEARCH RESULTS. If only 1 or 2 sources are provided, only list those. NEVER invent or hallucinate additional URLs.
+      4. THE ESCAPE HATCH: If the live search data says "No live data found", output: "Inconclusive: Insufficient live data to verify."
+      5. NEVER start your response with the word "Error".
       
-      prompt: prompt,
-    } as any);
+      Structure your response EXACTLY in this format:
 
-    if (!text || text.trim() === '') {
-      throw new Error('Groq returned an empty response.');
-    }
+      [Write exactly ONE short sentence summarizing your findings]
 
-    console.log('4. AI Generation Complete!');
+      Trust Score: [Number 0-100 only]
+
+      **Factual Consensus**
+      • [First short bullet point confirming if this event actually happened]
+      • [Second short bullet point with extra context]
+
+      **Logical Fallacies Detected**
+      • [First short bullet point identifying manipulation, or "None identified"]
+      • [Second short bullet point if applicable]
+
+      **Supporting Evidence**
+      • [First short bullet point with specific stats/numbers]
+      • [Second short bullet point with specific stats/numbers]
+
+      **Source Reliability & Verdict**
+      • [First short bullet point on the outlet's credibility]
+      • [Second short bullet point on the final verdict]
+
+      **Sources Investigated**
+      • List the actual URLs from the search results here as bullet points. Do not write placeholders or brackets. If you only have 1 or 2 URLs, just list those.`,
+      
+      prompt: `${promptData}\n\n=== LIVE WEB SEARCH RESULTS ===\n${liveSearchContext}\n===============================\n\nBased ONLY on the live web search results above, evaluate the claim.`,
+    });
+
+    if (!text || text.trim() === '') throw new Error('Groq returned an empty response.');
+
+    console.log('5. AI Generation Complete!');
     return text;
   
   } catch (error) {
-    console.error('\n🚨 CRITICAL CATCH BLOCK TRIGGERED:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return `Connection Error: ${errorMessage}`;
+    console.error('\n🚨 CRITICAL ERROR:', error);
+    return `Connection Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
 }
