@@ -195,6 +195,7 @@ export async function verifyNews(input: string) {
       3. URLS ONLY: Under "Sources Investigated", ONLY output the URLs provided in the LIVE WEB SEARCH RESULTS. If only 1 or 2 sources are provided, only list those. NEVER invent or hallucinate additional URLs.
       4. THE ESCAPE HATCH: If the live search data says "No live data found", output: "Inconclusive: Insufficient live data to verify."
       5. NEVER start your response with the word "Error".
+      6. SATIRE & PARODY DETECTION: Actively evaluate the source domain and the tone of the claim. If the source is a known satirical outlet (e.g., The Onion, De Speld, Babylon Bee) or the claim is obvious parody, explicitly state "This is a satirical article" in your summary. Give it a Trust Score of 0, and use the bullet points to explain the joke rather than literally fact-checking it.
       
       Structure your response EXACTLY in this format:
 
