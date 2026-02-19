@@ -23,7 +23,28 @@ function isURL(str: string): boolean {
   }
 }
 
-// UPGRADED: Smart Link Checker that bypasses basic firewalls
+// NEW: Smart URL Parser to salvage blocked scrapes
+function extractHeadlineFromURL(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    const segments = urlObj.pathname.split('/').filter(Boolean);
+    let lastSegment = segments.pop() || '';
+    
+    // Remove file extensions (.html, .aspx)
+    lastSegment = lastSegment.replace(/\.[a-z0-9]+$/i, '');
+    
+    // Decode special chars (%C3%AF -> ï) and replace dashes with spaces
+    let text = decodeURIComponent(lastSegment).replace(/[-_]/g, ' ');
+    
+    // Remove leading date numbers (like 20260218)
+    text = text.replace(/^\d{4,8}\s/, '').trim();
+    
+    return text || url;
+  } catch {
+    return url;
+  }
+}
+
 async function isLinkAlive(url: string): Promise<boolean> {
   try {
     const response = await fetch(url, { 
@@ -36,18 +57,14 @@ async function isLinkAlive(url: string): Promise<boolean> {
       next: { revalidate: 3600 } 
     });
 
-    // If the page is explicitly deleted or gone, kill it.
     if (response.status === 404 || response.status === 410) {
       console.log(`   [Link Checker] ❌ 404/410 Dead Link: ${url}`);
       return false;
     }
 
-    // If it's 200 (OK), 3xx (Redirect), 403 (Firewall), or 405 (HEAD blocked), 
-    // it means the URL actually exists on the internet! Keep it.
     return true;
 
   } catch {
-    // If it completely times out or fails to connect, kill it.
     console.log(`   [Link Checker] ❌ Timeout/Blocked: ${url}`);
     return false;
   }
@@ -95,7 +112,6 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
   }
 }
 
-// Explicit Web Search Function
 async function fetchLiveSearchData(query: string) {
   console.log(`\n   [Brave] 🔎 Searching live web for: "${query}"`);
   try {
@@ -124,7 +140,6 @@ async function fetchLiveSearchData(query: string) {
     const verified = aliveChecks.filter(r => r !== null).slice(0, 3);
     console.log(`   [Brave] ✅ Found ${verified.length} verified, live URLs.`);
     
-    // Format the results so the AI can read them easily
     let formattedData = verified.map((v, i) => `Source ${i + 1}:\nTitle: ${v.title}\nURL: ${v.url}\nSnippet: ${v.description}`).join('\n\n');
     return formattedData || "No live data found.";
   } catch (error) {
@@ -161,7 +176,9 @@ export async function verifyNews(input: string) {
         headline = articleTitle;
         console.log('✅ Scrape successful. Title:', articleTitle);
       } catch (error) {
-        console.log('⚠️ Scraper blocked. Proceeding with raw URL.');
+        // FIX: Extract readable headline from URL instead of searching raw URL
+        headline = extractHeadlineFromURL(input);
+        console.log(`⚠️ Scraper blocked. Extracted fallback headline: "${headline}"`);
       }
     } else {
       console.log('2. Scraper: Input is text. Skipping.');
