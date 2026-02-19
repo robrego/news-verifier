@@ -78,6 +78,7 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
       signal: AbortSignal.timeout(SCRAPER_TIMEOUT_MS)
     });
 
+    // We keep this generic because we just want it to fail over to the URL parser if blocked
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const html = await response.text();
@@ -133,7 +134,11 @@ async function fetchLiveSearchData(query: string) {
       signal: AbortSignal.timeout(6000) 
     });
     
-    if (!res.ok) throw new Error('Brave API failed');
+    // 🚨 NEW FIX: Capture the exact HTTP Status code and error reason from Brave
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Status: ${res.status}. Details: ${errorText}`);
+    }
 
     const data = await res.json();
     const rawResults = data.web?.results || [];
