@@ -8,7 +8,7 @@ import * as cheerio from 'cheerio';
 // 1. TIMEOUTS & BLACKLISTS
 // ==========================================
 const SCRAPER_TIMEOUT_MS = 6000;
-const PING_TIMEOUT_MS = 2500;
+const PING_TIMEOUT_MS = 3500; // Increased for Vercel's Edge network
 const BLACKLISTED_DOMAINS = /change\.org|petition|museum|facebook\.com|twitter\.com|x\.com|instagram\.com/i;
 
 // ==========================================
@@ -128,7 +128,7 @@ async function fetchLiveSearchData(query: string) {
         'Accept': 'application/json',
         'X-Subscription-Token': process.env.BRAVE_API_KEY!,
       },
-      signal: AbortSignal.timeout(5000)
+      signal: AbortSignal.timeout(6000) 
     });
     
     if (!res.ok) throw new Error('Brave API failed');
@@ -145,8 +145,17 @@ async function fetchLiveSearchData(query: string) {
       })
     );
 
-    const verified = aliveChecks.filter(r => r !== null).slice(0, 3);
-    console.log(`   [Brave] ✅ Found ${verified.length} verified, live URLs.`);
+    let verified = aliveChecks.filter(r => r !== null).slice(0, 3);
+    
+    // 🚨 THE VERCEL FIX: The Safety Net
+    // If Vercel's network drops all connections and kills our verified array,
+    // fallback to the top 3 raw Brave results so the app doesn't say "Inconclusive"!
+    if (verified.length === 0 && validCandidates.length > 0) {
+      console.log(`   [Brave] ⚠️ All links timed out on Vercel. Falling back to raw search results.`);
+      verified = validCandidates.slice(0, 3);
+    } else {
+      console.log(`   [Brave] ✅ Found ${verified.length} verified, live URLs.`);
+    }
     
     let formattedData = verified.map((v, i) => `Source ${i + 1}:\nTitle: ${v.title}\nURL: ${v.url}\nSnippet: ${v.description}`).join('\n\n');
     return formattedData || "No live data found.";
