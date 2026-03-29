@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-// 1. Import the Analytics component
 import { Analytics } from "@vercel/analytics/react";
-import Header from "./components/header";
+import Header from "./components/header"; // 👈 Import here
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +13,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-
 
 export const metadata: Metadata = {
   title: "Verify News | AI Fact-Checking Tool",
