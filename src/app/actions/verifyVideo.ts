@@ -59,7 +59,7 @@ export async function summarizeAndExtractClaims(transcript: string) {
       Your job is to read a raw video transcript and hunt for the most controversial, unbelievable, or potentially misleading claims.
 
       STRICT RULES:
-      1. Write a 3-sentence summary of the main arguments.
+      1. YOU MUST OUTPUT EVERYTHING IN ENGLISH. No matter what language the transcript is in, your summary and quotes must be in English.
       2. Extract EXACTLY the top 3 most extreme, disputed, or central claims AS DIRECT VERBATIM QUOTES from the transcript. Do not paraphrase. Find the exact words they said.
       3. You MUST output your response in strict JSON format. NO MARKDOWN.
       
@@ -147,7 +147,8 @@ export async function generateFinalVerdict(summary: string, claims: string[], ev
       - Do not give the video the "benefit of the doubt." If evidence is weak, grade harshly.
 
       STRICT OUTPUT FORMAT:
-      You must output a highly structured report exactly like this:
+      - YOU MUST OUTPUT THE ENTIRE REPORT IN ENGLISH.
+      - You must output a highly structured report exactly like this:
       
       [Write a 2-3 sentence overarching conclusion here.]
       Trust Score: [0-100]
