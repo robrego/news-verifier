@@ -53,7 +53,7 @@ export async function summarizeAndExtractClaims(transcript: string) {
   
   try {
     const { text } = await generateText({
-      model: groq('llama-3.3-70b-versatile'),
+      model: groq('llama-3.1-8b-instant'),
       temperature: 0.1, 
       system: `You are an aggressive, highly skeptical investigative journalist. 
       Your job is to read a raw video transcript and hunt for the most controversial, unbelievable, or potentially misleading claims.
@@ -137,7 +137,7 @@ export async function generateFinalVerdict(summary: string, claims: string[], ev
   
   try {
     const { text } = await generateText({
-      model: groq('llama-3.3-70b-versatile'),
+      model: groq('llama-3.1-8b-instant'),
       temperature: 0.2, 
       system: `You are a world-class investigative journalist and fact-checker. 
 

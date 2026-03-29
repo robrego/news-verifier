@@ -123,7 +123,7 @@ export default function VideoDeepDive() {
       <div className="grid grid-cols-12 gap-y-0">
         {introSummary && (
           <div className={`col-span-12 mb-10 pb-10 border-b ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-             <h4 className="text-[12px] font-bold uppercase tracking-[0.2em] text-purple-500 mb-5">Agent 1: Video Summary</h4>
+             <h4 className="text-[12px] font-bold uppercase tracking-[0.2em] text-purple-500 mb-5">Video Summary</h4>
              <p className={`text-xl font-medium leading-relaxed italic pr-0 sm:pr-6 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                "{formatSentences(introSummary)}"
              </p>
@@ -132,14 +132,27 @@ export default function VideoDeepDive() {
 
         {coreAnalysis.map((part, i) => {
           if (i % 2 === 0) {
-            const title = part.replace(/[:*]/g, '').trim();
+            let title = part.replace(/[:*]/g, '').trim();
             const lower = title.toLowerCase();
             let icon = "○"; let color = isDark ? "text-slate-500" : "text-slate-400";
             
-            if (lower.includes('fallacy') || lower.includes('quotes')) { icon = "⚠️"; color = "text-rose-500"; }
-            else if (lower.includes('consensus')) { icon = "✓"; color = "text-blue-500"; }
-            else if (lower.includes('evidence')) { icon = "📊"; color = "text-amber-500"; }
-            else if (lower.includes('verdict')) { icon = "⚖️"; color = "text-blue-500"; }
+            // Rewrite the titles on the fly for better UX
+            if (lower.includes('fallacy') || lower.includes('quotes')) { 
+                title = "Verified Quotes";
+                icon = "🎯"; color = "text-rose-500"; 
+            }
+            else if (lower.includes('consensus')) { 
+                title = "Factual Context";
+                icon = "⚖️"; color = "text-blue-500"; 
+            }
+            else if (lower.includes('evidence')) { 
+                title = "Supporting Research";
+                icon = "📚"; color = "text-amber-500"; 
+            }
+            else if (lower.includes('verdict')) { 
+                title = "Final Determination";
+                icon = "🏁"; color = "text-blue-500"; 
+            }
 
             return (
               <div key={i} className="col-span-12 mt-10 sm:mt-14 mb-6 sm:mb-8 flex items-center gap-4 sm:gap-5">
@@ -275,30 +288,30 @@ export default function VideoDeepDive() {
           </div>
         )}
 
-        {(step > 0 && step < 5) && (
+{(step > 0 && step < 5) && (
           <div className={`max-w-4xl p-8 sm:p-12 rounded-[1.5rem] sm:rounded-3xl border transition-all animate-in fade-in ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>
-            <h3 className={`font-bold text-[12px] uppercase tracking-[0.2em] mb-8 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>AI Pipeline Active</h3>
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                {step === 1 ? <span className="animate-spin text-blue-500 text-xl">⏳</span> : <span className="text-blue-500 text-xl">✓</span>}
-                <p className={`text-lg sm:text-xl font-medium ${step >= 1 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-500' : 'text-slate-400')}`}>1. Extracting YouTube Transcript</p>
+            <h3 className={`font-bold text-[12px] uppercase tracking-[0.2em] mb-10 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Intelligence Engine Active</h3>
+            <div className="space-y-8">
+              <div className="flex items-center gap-5">
+                {step === 1 ? <span className="animate-pulse w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" /> : <span className="text-blue-500 text-xl">✓</span>}
+                <p className={`text-lg sm:text-xl font-medium tracking-tight ${step >= 1 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-600' : 'text-slate-300')}`}>Ingesting and parsing video metadata</p>
               </div>
-              <div className="flex items-center gap-4">
-                {step < 2 ? <span className="text-xl opacity-30">○</span> : step === 2 ? <span className="animate-spin text-purple-500 text-xl">🧠</span> : <span className="text-blue-500 text-xl">✓</span>}
-                <p className={`text-lg sm:text-xl font-medium ${step >= 2 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-600' : 'text-slate-300')}`}>2. Agent 1: Summarizing & Extracting Quotes</p>
+              <div className="flex items-center gap-5">
+                {step < 2 ? <span className="w-3 h-3 rounded-full border border-slate-300 opacity-30" /> : step === 2 ? <span className="animate-pulse w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]" /> : <span className="text-blue-500 text-xl">✓</span>}
+                <p className={`text-lg sm:text-xl font-medium tracking-tight ${step >= 2 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-600' : 'text-slate-300')}`}>Identifying core claims and verbatim quotes</p>
               </div>
-              <div className="flex items-center gap-4">
-                {step < 3 ? <span className="text-xl opacity-30">○</span> : step === 3 ? <span className="animate-spin text-amber-500 text-xl">🔎</span> : <span className="text-blue-500 text-xl">✓</span>}
-                <p className={`text-lg sm:text-xl font-medium ${step >= 3 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-600' : 'text-slate-300')}`}>3. Agent 2: Live Web Search via Brave</p>
+              <div className="flex items-center gap-5">
+                {step < 3 ? <span className="w-3 h-3 rounded-full border border-slate-300 opacity-30" /> : step === 3 ? <span className="animate-pulse w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]" /> : <span className="text-blue-500 text-xl">✓</span>}
+                <p className={`text-lg sm:text-xl font-medium tracking-tight ${step >= 3 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-600' : 'text-slate-300')}`}>Cross-referencing live global research data</p>
               </div>
-              <div className="flex items-center gap-4">
-                {step < 4 ? <span className="text-xl opacity-30">○</span> : step === 4 ? <span className="animate-spin text-rose-500 text-xl">⚖️</span> : <span className="text-blue-500 text-xl">✓</span>}
-                <p className={`text-lg sm:text-xl font-medium ${step >= 4 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-600' : 'text-slate-300')}`}>4. Agent 3: Calculating Final Trust Score</p>
+              <div className="flex items-center gap-5">
+                {step < 4 ? <span className="w-3 h-3 rounded-full border border-slate-300 opacity-30" /> : step === 4 ? <span className="animate-pulse w-3 h-3 rounded-full bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)]" /> : <span className="text-blue-500 text-xl">✓</span>}
+                <p className={`text-lg sm:text-xl font-medium tracking-tight ${step >= 4 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-600' : 'text-slate-300')}`}>Synthesizing final credibility magnitude</p>
               </div>
             </div>
           </div>
         )}
-
+        
         {step === 5 && finalData && (
           <div className="grid grid-cols-12 gap-8 sm:gap-10 animate-in fade-in slide-in-from-bottom-12 duration-1000">
             <div className="col-span-12 lg:col-span-4 h-fit lg:sticky lg:top-12">
