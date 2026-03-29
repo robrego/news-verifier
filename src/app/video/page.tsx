@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { fetchYouTubeTranscript, summarizeAndExtractClaims, searchBraveForClaims, generateFinalVerdict } from '../actions/verifyVideo';
 import { Space_Grotesk } from 'next/font/google';
+import Link from 'next/link';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
 
@@ -223,15 +224,32 @@ export default function VideoDeepDive() {
     <main className={`min-h-screen relative p-4 sm:p-6 lg:p-24 transition-colors duration-700 ${spaceGrotesk.className} ${isDark ? 'bg-[#0A0A0B] text-white' : 'bg-[#F9FAFF] text-slate-900'}`}>
       <div className="max-w-7xl mx-auto">
         <header className="mb-12 sm:mb-20 flex justify-between items-center">
-          <div className="flex items-center gap-3 font-semibold tracking-wide">
-            <div className={`relative w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center border transition-all ${isDark ? 'border-white/20 text-white/70' : 'border-slate-300 text-slate-400'}`}>
-              <span className="not-italic text-sm leading-none mt-[1px]">V</span>
-            </div>
-            <span className={`text-sm tracking-widest uppercase hidden sm:inline-block ${isDark ? 'text-white/60 font-light' : 'text-slate-400 font-medium'}`}>Video Deep Dive</span>
-          </div>
-          <button onClick={() => setIsDark(!isDark)} className={`w-14 h-8 rounded-full border flex items-center px-1 transition-all ${isDark ? 'bg-blue-500 border-blue-400 justify-end' : 'bg-slate-200 border-slate-300 justify-start'}`}>
-            <div className="w-6 h-6 bg-white rounded-full shadow-sm" />
-          </button>
+        <div className="flex items-center justify-between mb-20 sm:mb-32">
+        {/* Left: Status Badge */}
+        <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all ${isDark ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+         <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          Video Deep Dive
+       </div>
+
+        {/* Right: Nav + Mini Switch */}
+        <div className="flex items-center gap-10">
+          <nav className="flex gap-8">
+         {/* News Link - Now the faded one */}
+        <Link href="/" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'}`}>
+         News
+        </Link>
+
+        {/* Videos Link - Now the active one */}
+        <Link href="/video" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${isDark ? 'text-white' : 'text-purple-600'}`}>
+         Videos
+          </Link>
+    </nav>
+
+    <button onClick={() => setIsDark(!isDark)} className={`relative flex items-center w-10 h-5 rounded-full border transition-all duration-500 ${isDark ? 'bg-zinc-800 border-white/10' : 'bg-slate-100 border-slate-300'}`}>
+      <div className={`absolute w-3.5 h-3.5 rounded-full transition-all duration-300 shadow-sm ${isDark ? 'translate-x-5.5 bg-blue-500' : 'translate-x-1 bg-white'}`} />
+    </button>
+  </div>
+</div>
         </header>
 
         <section className="mb-16">
