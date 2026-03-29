@@ -75,6 +75,9 @@ export async function summarizeAndExtractClaims(transcript: string) {
     if (cleanedText.startsWith('```')) {
       cleanedText = cleanedText.replace(/^```json\n?/, '').replace(/\n?```$/, '');
     }
+
+    cleanedText = cleanedText.replace(/[\[\]]/g, "");
+    
     cleanedText = cleanedText.replace(/[\u0000-\u001F]+/g, ""); 
 
     const parsedData = JSON.parse(cleanedText);
