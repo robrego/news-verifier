@@ -6,6 +6,7 @@ import { Space_Grotesk } from 'next/font/google';
 import Link from 'next/link';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
+const isVideo = true;
 
 export default function VideoDeepDive() {
   const [url, setUrl] = useState('');
@@ -223,34 +224,43 @@ export default function VideoDeepDive() {
   return (
     <main className={`min-h-screen relative p-4 sm:p-6 lg:p-24 transition-colors duration-700 ${spaceGrotesk.className} ${isDark ? 'bg-[#0A0A0B] text-white' : 'bg-[#F9FAFF] text-slate-900'}`}>
       <div className="max-w-7xl mx-auto">
-        <header className="mb-12 sm:mb-20 flex justify-between items-center">
-        <div className="flex items-center justify-between mb-20 sm:mb-32">
-        {/* Left: Status Badge */}
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all ${isDark ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-         <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-          Video Deep Dive
-       </div>
+      <header className="mb-20 sm:mb-32 flex items-center justify-between w-full">
+  {/* Left: Status Badge */}
+  <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all ${
+    isDark ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+  }`}>
+    <span className={`w-2 h-2 rounded-full animate-pulse ${isVideo ? 'bg-purple-500' : 'bg-blue-500'}`} />
+    {isVideo ? 'Video Deep Dive' : 'Verify News'}
+  </div>
 
-        {/* Right: Nav + Mini Switch */}
-        <div className="flex items-center gap-10">
-          <nav className="flex gap-8">
-         {/* News Link - Now the faded one */}
-        <Link href="/" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'}`}>
-         News
-        </Link>
-
-        {/* Videos Link - Now the active one */}
-        <Link href="/video" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${isDark ? 'text-white' : 'text-purple-600'}`}>
-         Videos
-          </Link>
+  {/* Right Side Group */}
+  <div className="flex items-center gap-6 sm:gap-10">
+    <nav className="flex gap-6 sm:gap-8">
+      <Link href="/" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${
+        !isVideo ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500')
+      }`}>
+        News
+      </Link>
+      <Link href="/video" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${
+        isVideo ? (isDark ? 'text-white' : 'text-purple-600') : (isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500')
+      }`}>
+        Videos
+      </Link>
     </nav>
 
-    <button onClick={() => setIsDark(!isDark)} className={`relative flex items-center w-10 h-5 rounded-full border transition-all duration-500 ${isDark ? 'bg-zinc-800 border-white/10' : 'bg-slate-100 border-slate-300'}`}>
-      <div className={`absolute w-3.5 h-3.5 rounded-full transition-all duration-300 shadow-sm ${isDark ? 'translate-x-5.5 bg-blue-500' : 'translate-x-1 bg-white'}`} />
+    {/* The Switch - Fixed with 'left' positioning instead of translate for better precision */}
+    <button 
+      onClick={() => setIsDark(!isDark)} 
+      className={`relative flex items-center w-11 h-6 rounded-full border transition-all duration-500 ${
+        isDark ? 'bg-zinc-800 border-white/10' : 'bg-slate-200 border-slate-300'
+      }`}
+    >
+      <div className={`absolute w-4 h-4 rounded-full transition-all duration-300 shadow-sm ${
+        isDark ? 'left-[22px] bg-blue-500' : 'left-[4px] bg-white'
+      }`} />
     </button>
   </div>
-</div>
-        </header>
+</header>
 
         <section className="mb-16">
           <h1 className={`text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[90px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
