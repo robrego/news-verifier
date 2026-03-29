@@ -263,7 +263,7 @@ export default function VideoDeepDive() {
 </header>
 
         <section className="mb-16">
-          <h1 className={`text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[90px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+          <h1 className={`text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[110px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
             Analyze <span className="bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent pr-2">Video.</span>
           </h1>
           
