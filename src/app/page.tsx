@@ -22,48 +22,16 @@ export default function Home() {
     setLoading(true);
     setStatus('idle');
 
-    const useMock = false; 
-
     try {
-      let resultText: string;
-
-      if (useMock) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        resultText = `Forensic analysis suggests high factual integrity regarding the Global Day of Action coordination in Southern California.
-Trust Score: 94
-
-**Factual Consensus**
-• Primary Status: Verified
-• Major Outlets: LA Times, Reuters, Al Jazeera
-• Missing Context: Specific local permits cited
-
-**Logical Fallacies Detected**
-• None Identified
-• The report maintains a neutral, observational tone
-
-**Supporting Evidence**
-• Data: 15,000+ confirmed by crowd-mapping AI
-• Timeline: Syncs with live 2:00 PM PST feeds
-
-**Source Reliability & Verdict**
-• Source Rank: Tier-1 Legacy Media
-• Final Verdict: Credible Field Reporting
-
-**Sources Investigated**
-• https://abc7.com/live
-• https://latimes.com/local
-• https://reuters.com/world`;
-      } else {
-        const response = await verifyNews(input);
-        
-        if (!response || response.includes('Error') || response.includes('Connection Error') || response.includes('429')) {
-          setStatus('limit');
-          setLoading(false);
-          return;
-        }
-        resultText = response;
+      const response = await verifyNews(input);
+      
+      if (!response || response.includes('Error') || response.includes('Connection Error') || response.includes('429')) {
+        setStatus('limit');
+        setLoading(false);
+        return;
       }
 
+      const resultText = response;
       const scoreMatch = resultText.match(/Trust Score:\s*(\d+)/i);
       const extractedScore = scoreMatch ? parseInt(scoreMatch[1], 10) : 50;
 
@@ -92,6 +60,21 @@ Trust Score: 94
     setStatus('idle');
   };
 
+  // 🧹 NEW HELPER: Splits text at periods and adds elegant paragraph spacing!
+  const formatSentences = (rawText: string) => {
+    if (!rawText) return null;
+    const sentences = rawText.split(/\.\s+/);
+    return sentences.map((sentence, index) => {
+      const isLast = index === sentences.length - 1;
+      const displaySentence = isLast ? sentence : `${sentence}.`;
+      return (
+        <span key={index} className="block mb-4 last:mb-0">
+          {displaySentence}
+        </span>
+      );
+    });
+  };
+
   const renderParsedAnalysis = (text: string) => {
     if (!text) return null;
 
@@ -111,8 +94,11 @@ Trust Score: 94
       <div className="grid grid-cols-12 gap-y-0">
         {introSummary && (
           <div className={`col-span-12 mb-10 pb-10 border-b ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-            <h4 className="text-[12px] font-bold uppercase tracking-[0.2em] text-blue-500 mb-5">Summary</h4>
-            <p className={`text-xl sm:text-2xl font-medium leading-snug italic pr-0 sm:pr-6 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>"{introSummary}"</p>
+            <h4 className="text-[12px] font-bold uppercase tracking-[0.2em] text-blue-500 mb-5">Executive Summary</h4>
+            {/* TYPOGRAPHY FIX: Standard XL on desktop */}
+            <p className={`text-xl font-medium leading-relaxed italic pr-0 sm:pr-6 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+              "{formatSentences(introSummary)}"
+            </p>
           </div>
         )}
 
@@ -140,17 +126,17 @@ Trust Score: 94
             );
           }
 
-          // BULLETPROOF PARSER: Split by newlines, bullet points, OR asterisks
           const bullets = part.trim()
           .split(/[\n•]+|\*(?=\s)/)
           .map(b => b.replace(/^[•\-\*]\s*/, '').trim())
           .filter(b => b.length > 0);          
+          
           return (
             <div key={i} className={`col-span-12 grid grid-cols-1 ${bullets.length > 1 ? 'md:grid-cols-2' : ''} gap-4 sm:gap-5`}>
               {bullets.map((bullet, idx) => {
                 const content = bullet.trim();
                 
-                // BULLETPROOF URL PARSER: Finds any http/https link inside the text
+                // BULLETPROOF URL PARSER
                 const urlMatch = content.match(/(https?:\/\/[^\s]+)/);
                 const isUrl = urlMatch !== null;
                 
@@ -185,7 +171,7 @@ Trust Score: 94
                     <div className="flex items-start gap-4 sm:gap-5">
                       <div className={`w-2 h-2 rounded-full ${dotColor} flex-shrink-0 mt-2`} />
                       <p className={`text-[1rem] sm:text-[1.05rem] leading-relaxed ${isPositive ? 'font-medium' : 'font-normal'} ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                        {content}
+                        {formatSentences(content)}
                       </p>
                     </div>
                   </div>
@@ -305,8 +291,9 @@ Trust Score: 94
               </div>
             </div>
             
+            {/* CONTAINER FIX: Removed excessive transparency, added subtle premium gradient */}
             <div className={`col-span-12 lg:col-span-8 p-6 sm:p-8 md:p-16 rounded-[1.5rem] sm:rounded-3xl border transition-all backdrop-blur-sm ${
-              isDark ? 'bg-white/[0.01] border-white/5' : 'bg-white/30 border-white shadow-sm shadow-slate-200/20'
+              isDark ? 'bg-gradient-to-br from-white/[0.04] to-transparent border-white/5' : 'bg-gradient-to-br from-white to-blue-50/30 border-white shadow-sm shadow-slate-200/20'
             }`}>
               {renderParsedAnalysis(data.analysis)}
             </div>
