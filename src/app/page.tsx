@@ -228,7 +228,7 @@ export default function Home() {
 </header>
 
         <section className="mb-20 sm:mb-32">
-          <h1 className={`text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[115px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+          <h1 className={`text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[90px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
             Is this <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent pr-2">Real?</span>
           </h1>
           
