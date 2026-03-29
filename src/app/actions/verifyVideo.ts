@@ -1,7 +1,5 @@
 'use server'
 
-export const maxDuration = 60; // 🚀 FORCES VERCEL FREE TIER TO ALLOW 60 SECONDS
-
 import { YoutubeTranscript } from 'youtube-transcript-plus';
 import { groq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
