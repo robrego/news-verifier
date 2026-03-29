@@ -131,7 +131,7 @@ export async function searchBraveForClaims(claims: string[]) {
   }
 }
 
-// --- PART 4: AGENT 3 (THE RUTHLESS JUDGE) ---
+/// --- PART 4: AGENT 3 (THE RUTHLESS JUDGE) ---
 export async function generateFinalVerdict(summary: string, claims: string[], evidence: string) {
   console.log('\n⚖️ [Agent 3] Weighing the evidence and generating final verdict...');
   
@@ -139,36 +139,38 @@ export async function generateFinalVerdict(summary: string, claims: string[], ev
     const { text } = await generateText({
       model: groq('llama-3.3-70b-versatile'),
       temperature: 0.2, 
-      system: `You are a ruthless, highly critical fact-checking AI. You are reviewing claims from a video/podcast against live web evidence.
+      system: `You are a world-class investigative journalist and fact-checker. 
 
-      Your job is to assign a Trust Score (0-100). 
-      - If the claims are wild speculation, unproven, or partially false, the score MUST be below 50. 
-      - Only give scores above 80 if the claims are universally accepted scientific or historical facts. 
-      - Do not give the video the "benefit of the doubt." If evidence is weak, grade harshly.
+      WRITING STYLE RULES:
+      1. NEVER use the phrase "live web evidence" or "the search results state."
+      2. SPEAK WITH AUTHORITY. Instead of saying "The evidence shows that X is true," just say "X is true according to [Source]."
+      3. BE PUNCHY. Use active verbs. Don't be repetitive.
+      4. ALL OUTPUT MUST BE IN ENGLISH.
+
+      SCORING RULES:
+      - Assign a Trust Score (0-100). 
+      - Be ruthless. If a claim is a "fun myth" with no scientific backing, score it low.
 
       STRICT OUTPUT FORMAT:
-      - YOU MUST OUTPUT THE ENTIRE REPORT IN ENGLISH.
-      - You must output a highly structured report exactly like this:
-      
       [Write a 2-3 sentence overarching conclusion here.]
       Trust Score: [0-100]
 
       **Analyzed Quotes**
-      • "[Insert English Translated Exact Quote 1 Here]" - [Write your factual analysis of this quote based on the evidence]
-      • "[Insert English Translated Exact Quote 2 Here]" - [Write your factual analysis of this quote based on the evidence]
-      • "[Insert English Translated Exact Quote 3 Here]" - [Write your factual analysis of this quote based on the evidence]
+      • "[English Quote 1]" - [Directly state the facts here. e.g., "This is confirmed by a Stanford study which found that..."]
+      • "[English Quote 2]" - [Directly state the facts here. e.g., "While popular, this is actually a common myth; neurological data suggests..."]
+      • "[English Quote 3]" - [Directly state the facts here.]
 
       **Source Reliability & Verdict**
-      • Final Verdict: [e.g., "Highly Credible", "Mixed Accuracy", "Factually Incorrect", "Unverified Speculation"]
+      • Final Verdict: [e.g., "Scientifically Verified", "Social Hyperbole", "Factually Inaccurate"]
       `,
-      prompt: `VIDEO SUMMARY:\n${summary}\n\nQUOTES EXTRACTED:\n${JSON.stringify(claims)}\n\nLIVE WEB EVIDENCE:\n${evidence}`
+      prompt: `SUMMARY:\n${summary}\n\nQUOTES:\n${JSON.stringify(claims)}\n\nRESEARCH DATA:\n${evidence}`
     });
 
-    console.log('✅ [Agent 3] Final verdict generated!');
+    console.log('✅ [Agent 3] High-authority verdict generated!');
     return { success: true, analysis: text };
 
   } catch (error) {
-    console.error('❌ [Agent 3] Failed to generate verdict:', error);
-    return { success: false, error: 'Agent 3 failed to generate the final analysis.' };
+    console.error('❌ [Agent 3] Failed:', error);
+    return { success: false, error: 'Agent 3 failed.' };
   }
 }
