@@ -75,14 +75,20 @@ export async function summarizeAndExtractClaims(transcript: string) {
     if (cleanedText.startsWith('```')) {
       cleanedText = cleanedText.replace(/^```json\n?/, '').replace(/\n?```$/, '');
     }
-
-    cleanedText = cleanedText.replace(/[\[\]]/g, "");
     
     cleanedText = cleanedText.replace(/[\u0000-\u001F]+/g, ""); 
 
     const parsedData = JSON.parse(cleanedText);
-    console.log('✅ [Agent 1] Successfully extracted quotes!');
     
+    // Surgical Clean: Remove brackets from the summary and claims only
+    if (parsedData.summary) {
+      parsedData.summary = parsedData.summary.replace(/[\[\]()]/g, "").trim();
+    }
+    if (parsedData.claims) {
+      parsedData.claims = parsedData.claims.map((c: string) => c.replace(/[\[\]()]/g, "").trim());
+    }
+
+    console.log('✅ [Agent 1] Successfully cleaned and parsed data!');
     return { success: true, data: parsedData };
 
   } catch (error) {
