@@ -1,38 +1,49 @@
 'use server'
 
-import { YoutubeTranscript } from 'youtube-transcript-plus';
 import { groq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
-// --- PART 1: THE EXTRACTOR ---
+// --- PART 1: THE EXTRACTOR (SUPADATA RAPIDAPI) ---
 export async function fetchYouTubeTranscript(videoUrl: string) {
   console.log(`\n--- 🎬 YOUTUBE EXTRACTION START ---`);
   
+  const apiKey = process.env.RAPIDAPI_KEY;
+  if (!apiKey) {
+    return { success: false, error: 'RAPIDAPI_KEY is missing from environment variables.' };
+  }
+
   try {
-    const transcriptArray = await YoutubeTranscript.fetchTranscript(videoUrl, { lang: 'en' });
-    
-    // 🧹 SANITIZER: Clean up HTML entities and raw newlines that break JSON parsing
-    const fullText = transcriptArray
-      .map(item => item.text)
-      .filter(Boolean) 
-      .join(' ')
-      .replace(/&#39;/g, "'")
-      .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, '&')
-      .replace(/[\n\r]+/g, ' '); 
-    
-    const wordCount = fullText.trim() ? fullText.trim().split(/\s+/).length : 0;
-    
-    if (wordCount === 0) {
-      return { success: false, error: 'YouTube returned an empty transcript. Missing English CCs.' };
+    // Call the Supadata API to bypass YouTube's IP blocks
+    const response = await fetch(`https://youtube-transcripts.p.rapidapi.com/youtube/transcript?url=${encodeURIComponent(videoUrl)}&chunkSize=500`, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-host': 'youtube-transcripts.p.rapidapi.com',
+        'x-rapidapi-key': apiKey
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`RapidAPI failed with status ${response.status}`);
     }
 
-    console.log(`✅ Success! Extracted ${wordCount} words.`);
+    const data = await response.json();
+    
+    // Supadata returns an array of chunks in data.content
+    if (!data.content || !Array.isArray(data.content)) {
+      return { success: false, error: 'No transcript found for this video. It might not have closed captions.' };
+    }
+
+    // Map through the chunks and stitch them together
+    const fullText = data.content.map((chunk: any) => chunk.text).join(' ');
+
+    const wordCount = fullText.trim().split(/\s+/).length;
+    console.log(`✅ Success! Extracted ${wordCount} words via RapidAPI.`);
+    
     return { success: true, text: fullText };
 
   } catch (error) {
     console.error(`❌ Extraction Failed:`, error);
-    return { success: false, error: `Could not extract transcript. YouTube might be blocking the request.` };
+    return { success: false, error: `Proxy failed to extract transcript. Please use the manual override.` };
   }
 }
 
