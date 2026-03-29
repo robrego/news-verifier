@@ -8,6 +8,7 @@ const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
 
 export default function VideoDeepDive() {
   const [url, setUrl] = useState('');
+  const [manualText, setManualText] = useState(''); // 🚀 NEW: State for manual override
   const [step, setStep] = useState(0); 
   const [error, setError] = useState('');
   
@@ -21,11 +22,12 @@ export default function VideoDeepDive() {
     document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
 
+  // The Standard Pipeline
   const handleDeepDive = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) return;
     
-    setError(''); setSummary(''); setClaims([]); setFinalData(null); setStep(1); 
+    setError(''); setSummary(''); setClaims([]); setFinalData(null); setManualText(''); setStep(1); 
 
     const transcriptResponse = await fetchYouTubeTranscript(url);
     if (!transcriptResponse.success || !transcriptResponse.text) {
@@ -33,9 +35,21 @@ export default function VideoDeepDive() {
       setStep(-1); return;
     }
 
-    setStep(2); 
+    await runAgents(transcriptResponse.text);
+  };
 
-    const agent1Response = await summarizeAndExtractClaims(transcriptResponse.text);
+  // 🚀 NEW: The Manual Override Pipeline (Jumps straight to Agent 1)
+  const handleManualDeepDive = async () => {
+    if (!manualText) return;
+    setError('');
+    setStep(2); 
+    await runAgents(manualText);
+  };
+
+  // Helper function to run Agents 1, 2, and 3 so we don't repeat code
+  const runAgents = async (transcriptData: string) => {
+    setStep(2); 
+    const agent1Response = await summarizeAndExtractClaims(transcriptData);
     if (!agent1Response.success || !agent1Response.data) {
       setError(agent1Response.error || 'Agent 1 failed to analyze the text.');
       setStep(-1); return;
@@ -82,7 +96,7 @@ export default function VideoDeepDive() {
   };
 
   const handleClear = () => {
-    setUrl(''); setStep(0); setSummary(''); setClaims([]); setFinalData(null); setError('');
+    setUrl(''); setStep(0); setSummary(''); setClaims([]); setFinalData(null); setError(''); setManualText('');
   };
 
   const formatSentences = (rawText: string) => {
@@ -143,7 +157,6 @@ export default function VideoDeepDive() {
               {bullets.map((bullet, idx) => {
                 const content = bullet.trim();
                 
-                // 1. Check for Exact Quotes: "[Quote]" - [Analysis]
                 const exactQuoteMatch = content.match(/^["“](.*?)["”]\s*[-–—]\s*(.*)/);
                 
                 if (exactQuoteMatch) {
@@ -152,14 +165,12 @@ export default function VideoDeepDive() {
                   
                   return (
                     <div key={idx} className={`p-6 sm:p-8 rounded-3xl border transition-all ${isDark ? 'bg-[#151517] border-white/5 shadow-xl shadow-black/50' : 'bg-white border-slate-200 shadow-xl shadow-slate-200/50'}`}>
-                      
                       <div className={`relative p-6 sm:p-8 mb-6 rounded-2xl border ${isDark ? 'bg-[#1A1A1D] border-white/5' : 'bg-slate-50 border-slate-200/50'}`}>
                         <span className={`absolute top-4 left-4 text-5xl font-serif leading-none ${isDark ? 'text-purple-500/20' : 'text-purple-500/20'}`}>"</span>
                         <p className={`relative z-10 text-[1.1rem] sm:text-[1.2rem] leading-relaxed font-serif italic ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                           {exactQuote}
                         </p>
                       </div>
-                      
                       <div className="flex items-start gap-4 sm:gap-5">
                         <div className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0 mt-2" />
                         <p className={`text-[1rem] sm:text-[1.05rem] leading-relaxed font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -170,7 +181,6 @@ export default function VideoDeepDive() {
                   );
                 }
 
-                // 2. Fallback for regular bullets
                 const lowerContent = content.toLowerCase();
                 const isNegative = lowerContent.includes('missing') || lowerContent.includes('incorrect') || lowerContent.includes('false') || lowerContent.includes('low');
                 const isPositive = lowerContent.includes('verified') || lowerContent.includes('true') || lowerContent.includes('credible') || lowerContent.includes('high');
@@ -240,10 +250,28 @@ export default function VideoDeepDive() {
           </div>
         </section>
 
+        {/* 🚀 NEW: The Manual Override Box */}
         {error && (
           <div className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border animate-in fade-in max-w-4xl ${isDark ? 'bg-rose-500/10 border-rose-500/20 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-800 shadow-sm'}`}>
-            <span className="font-bold uppercase tracking-wider text-[11px] opacity-80">System Error</span>
-            <p className="text-[14px] sm:text-[15px] font-medium mt-1">{error}</p>
+            <span className="font-bold uppercase tracking-wider text-[11px] opacity-80 flex items-center gap-2">
+              ⚠️ Anti-Bot Protection Triggered
+            </span>
+            <p className="text-[14px] sm:text-[15px] font-medium mt-3 mb-5 leading-relaxed">
+              YouTube blocked our cloud server from reading this video. <strong>But you can bypass this!</strong> Open the YouTube video, click "Show Transcript", copy the text, and paste it below:
+            </p>
+            <textarea 
+               className={`w-full p-5 rounded-xl border text-[14px] h-32 outline-none font-mono transition-all ${isDark ? 'bg-black/20 border-rose-500/30 text-slate-300 focus:border-rose-400' : 'bg-white border-rose-200 focus:border-rose-400 text-slate-700'}`}
+               placeholder="Paste the raw YouTube transcript text here..."
+               value={manualText}
+               onChange={(e) => setManualText(e.target.value)}
+            />
+            <button 
+              onClick={handleManualDeepDive} 
+              disabled={!manualText}
+              className={`mt-5 px-8 py-4 rounded-xl font-bold uppercase text-[13px] tracking-[0.15em] transition-all disabled:opacity-50 ${isDark ? 'bg-rose-500 text-white hover:bg-rose-400' : 'bg-rose-600 text-white hover:bg-rose-500'}`}
+            >
+              Bypass & Analyze
+            </button>
           </div>
         )}
 
@@ -257,7 +285,7 @@ export default function VideoDeepDive() {
               </div>
               <div className="flex items-center gap-4">
                 {step < 2 ? <span className="text-xl opacity-30">○</span> : step === 2 ? <span className="animate-spin text-purple-500 text-xl">🧠</span> : <span className="text-blue-500 text-xl">✓</span>}
-                <p className={`text-lg sm:text-xl font-medium ${step >= 2 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-600' : 'text-slate-300')}`}>2. Agent 1: Summarizing & Extracting Claims</p>
+                <p className={`text-lg sm:text-xl font-medium ${step >= 2 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-600' : 'text-slate-300')}`}>2. Agent 1: Summarizing & Extracting Quotes</p>
               </div>
               <div className="flex items-center gap-4">
                 {step < 3 ? <span className="text-xl opacity-30">○</span> : step === 3 ? <span className="animate-spin text-amber-500 text-xl">🔎</span> : <span className="text-blue-500 text-xl">✓</span>}
