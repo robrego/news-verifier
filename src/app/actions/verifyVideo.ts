@@ -154,9 +154,9 @@ export async function generateFinalVerdict(summary: string, claims: string[], ev
       Trust Score: [0-100]
 
       **Analyzed Quotes**
-      • "[Insert Exact Quote 1 Here]" - [Write your factual analysis of this quote based on the evidence]
-      • "[Insert Exact Quote 2 Here]" - [Write your factual analysis of this quote based on the evidence]
-      • "[Insert Exact Quote 3 Here]" - [Write your factual analysis of this quote based on the evidence]
+      • "[Insert English Translated Exact Quote 1 Here]" - [Write your factual analysis of this quote based on the evidence]
+      • "[Insert English Translated Exact Quote 2 Here]" - [Write your factual analysis of this quote based on the evidence]
+      • "[Insert English Translated Exact Quote 3 Here]" - [Write your factual analysis of this quote based on the evidence]
 
       **Source Reliability & Verdict**
       • Final Verdict: [e.g., "Highly Credible", "Mixed Accuracy", "Factually Incorrect", "Unverified Speculation"]
