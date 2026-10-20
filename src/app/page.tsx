@@ -4,14 +4,40 @@ import { useState, useEffect } from 'react';
 import { verifyNews } from '@/app/actions/verify';
 import { Space_Grotesk } from 'next/font/google';
 import Link from 'next/link';
+import { EvidenceRail } from '@/components/Evidence';
+import type { Evidence } from '@/lib/search';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
 const isVideo = false;
 
+type Tone = 'blue' | 'amber' | 'rose' | 'slate';
+type Band = { label: string; tone: Tone };
+
+// Plain-language bands replace a bare 0-100 number as the headline of a result.
+function getBand(d: { score: number; analysis: string; degraded?: boolean }): Band | null {
+  if (d.degraded) return null;
+  if (d.score === 0 && /satir/i.test(d.analysis)) return { label: 'Satire', tone: 'rose' };
+  if (/^\s*inconclusive/i.test(d.analysis)) return { label: 'Not enough evidence', tone: 'slate' };
+  if (d.score >= 75) return { label: 'Well supported', tone: 'blue' };
+  if (d.score >= 40) return { label: 'Mixed or unclear', tone: 'amber' };
+  return { label: 'Likely false or misleading', tone: 'rose' };
+}
+
+const TONE: Record<Tone, { text: string; bar: string }> = {
+  blue: { text: 'text-blue-500', bar: 'bg-blue-500' },
+  amber: { text: 'text-amber-500', bar: 'bg-amber-400' },
+  rose: { text: 'text-rose-500', bar: 'bg-rose-500' },
+  slate: { text: 'text-slate-400', bar: 'bg-slate-400' },
+};
+
+function summaryOf(text: string): string {
+  return text.replace(/Trust Score[:\s*]*\d+/gi, '').split('**')[0].trim();
+}
+
 export default function Home() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<{ score: number; sentiment: string; analysis: string; degraded?: boolean; notice?: string } | null>(null);
+  const [data, setData] = useState<{ score: number; sentiment: string; analysis: string; evidence?: Evidence; degraded?: boolean; notice?: string } | null>(null);
   const [isDark, setIsDark] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'limit' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -52,6 +78,7 @@ export default function Home() {
         score: extractedScore,
         sentiment: sentiment,
         analysis: resultText,
+        evidence: response.evidence,
         degraded: response.degraded,
         notice: response.notice
       });
@@ -88,34 +115,22 @@ export default function Home() {
     });
   };
 
-  const renderParsedAnalysis = (text: string) => {
+  const renderParsedAnalysis = (text: string, hide?: RegExp) => {
     if (!text) return null;
 
     const sections = text.replace(/Trust Score[:\s*]*\d+/gi, '').split(/\*\*(.*?)\*\*/g);
-    const introSummary = sections[0].trim();
     const coreAnalysis = sections.slice(1);
 
-    if (coreAnalysis.length === 0) {
-      return (
-        <div className={`p-6 whitespace-pre-wrap leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-          {text}
-        </div>
-      );
-    }
+    // No structured sections: the verdict banner already shows the summary.
+    if (coreAnalysis.length === 0) return null;
 
     return (
       <div className="grid grid-cols-12 gap-y-0">
-        {introSummary && (
-          <div className={`col-span-12 mb-10 pb-10 border-b ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
-            <h4 className="text-[12px] font-bold uppercase tracking-[0.2em] text-blue-500 mb-5">Executive Summary</h4>
-            {/* TYPOGRAPHY FIX: Standard XL on desktop */}
-            <p className={`text-xl font-medium leading-relaxed italic pr-0 sm:pr-6 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-              "{formatSentences(introSummary)}"
-            </p>
-          </div>
-        )}
-
         {coreAnalysis.map((part, i) => {
+          // Sections the evidence rail already shows (as structured cards) are skipped.
+          const ownTitle = (coreAnalysis[i - (i % 2)] || '').replace(/[:*]/g, '').trim().toLowerCase();
+          if (hide && hide.test(ownTitle)) return null;
+
           if (i % 2 === 0) {
             const title = part.replace(/[:*]/g, '').trim();
             const lower = title.toLowerCase();
@@ -129,7 +144,7 @@ export default function Home() {
             else if (lower.includes('sources')) { icon = "🔗"; color = "text-blue-500"; }
 
             return (
-              <div key={i} className="col-span-12 mt-10 sm:mt-14 mb-6 sm:mb-8 flex items-center gap-4 sm:gap-5">
+              <div key={i} className={`col-span-12 ${i === 0 ? '' : 'mt-10 sm:mt-14'} mb-6 sm:mb-8 flex items-center gap-4 sm:gap-5`}>
                 <span className={`w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center text-lg border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-100'} ${color}`}>
                   {icon}
                 </span>
@@ -305,53 +320,78 @@ export default function Home() {
           </div>
         </section>
 
-        {data && status !== 'limit' && status !== 'error' && (
-          <div className="grid grid-cols-12 gap-8 sm:gap-10 animate-in fade-in slide-in-from-bottom-12 duration-1000">
-            <div className="col-span-12 lg:col-span-4 h-fit lg:sticky lg:top-12">
-              {data.degraded ? (
-                <div className={`p-8 sm:p-10 rounded-[1.5rem] sm:rounded-3xl border ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
-                  <span className="block text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.2em] opacity-80">Evidence only</span>
-                  <p className="mt-4 text-[15px] font-medium leading-relaxed">{data.notice ?? 'The AI summary is unavailable right now.'}</p>
-                  <p className="mt-3 text-[13px] leading-relaxed opacity-80">No trust score is shown because it would be a guess without the AI step.</p>
-                </div>
-              ) : (
-              <div className={`p-8 sm:p-12 rounded-[1.5rem] sm:rounded-3xl border transition-all ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>
-                <span className="text-[11px] sm:text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em]">Trust Magnitude</span>
-                <div className={`mt-8 sm:mt-10 text-[100px] sm:text-[140px] font-bold leading-none tracking-tighter transition-colors duration-1000 ${
-                  data.score > 70 ? 'text-blue-500' : 
-                  data.score > 40 ? 'text-amber-500' : 
-                  'text-rose-600'
-                }`}>
-                  {data.score}
-                </div>
-                <div className="mt-8 sm:mt-12 space-y-5 sm:space-y-6">
-                  <div className={`h-2 rounded-full overflow-hidden ${isDark ? 'bg-white/5' : 'bg-slate-50'}`}>
-                    <div className={`h-full transition-all duration-[2s] ${
-                      data.score > 70 ? 'bg-blue-500' : 
-                      data.score > 40 ? 'bg-amber-400' : 
-                      'bg-rose-500'
-                    }`} style={{ width: `${data.score}%` }} />
+        {data && status !== 'limit' && status !== 'error' && (() => {
+          const band = getBand(data);
+          const tone = band ? TONE[band.tone] : null;
+          const summary = summaryOf(data.analysis);
+          const evidence = data.evidence;
+          const hide = data.degraded
+            ? /sources investigated|existing fact-check|source reliability/
+            : /sources investigated|existing fact-check/;
+          const muted = isDark ? 'text-slate-400' : 'text-slate-500';
+          const analysisNode = data.degraded ? null : renderParsedAnalysis(data.analysis, evidence ? hide : /sources investigated$/);
+          const showAnalysis = analysisNode !== null;
+
+          return (
+            <div className="animate-in fade-in slide-in-from-bottom-12 duration-1000">
+              {/* VERDICT BANNER */}
+              <div className={`mb-8 sm:mb-10 rounded-[1.5rem] sm:rounded-3xl border p-8 sm:p-12 ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>
+                <span className={`text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.2em] ${muted}`}>
+                  {data.degraded ? 'Evidence only' : 'Verdict'}
+                </span>
+
+                {band && tone ? (
+                  <div className={`mt-4 text-4xl sm:text-6xl font-bold leading-[1.05] tracking-tight ${tone.text}`}>{band.label}</div>
+                ) : (
+                  <div className={`mt-4 text-3xl sm:text-5xl font-bold leading-[1.05] tracking-tight ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>
+                    Review the sources
                   </div>
-                  <span className={`inline-block text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.15em] px-6 sm:px-8 py-2.5 rounded-xl ${
-                    data.score > 70 ? 'bg-blue-500/10 text-blue-500' : 
-                    data.score > 40 ? 'bg-amber-500/10 text-amber-500' : 
-                    'bg-rose-500/10 text-rose-500'
-                  }`}>
-                    {data.sentiment}
-                  </span>
-                </div>
+                )}
+
+                {summary && (
+                  <p className={`mt-6 max-w-3xl text-xl sm:text-2xl font-medium leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    {summary}
+                  </p>
+                )}
+
+                {data.degraded ? (
+                  <p className={`mt-6 text-[14px] leading-relaxed ${isDark ? 'text-amber-200/80' : 'text-amber-800'}`}>
+                    {data.notice ?? 'The AI summary is unavailable right now.'} No score is shown because it would be a guess.
+                  </p>
+                ) : band && tone && band.tone !== 'slate' && band.label !== 'Satire' ? (
+                  <div className="mt-8 max-w-md">
+                    <div className="flex items-baseline justify-between">
+                      <span className={`text-[11px] font-bold uppercase tracking-[0.2em] ${muted}`}>AI estimate</span>
+                      <span className={`text-sm font-bold tabular-nums ${muted}`}>{data.score} / 100</span>
+                    </div>
+                    <div className={`mt-2 h-1.5 overflow-hidden rounded-full ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}>
+                      <div className={`h-full transition-all duration-[1.5s] ${tone.bar}`} style={{ width: `${data.score}%` }} />
+                    </div>
+                    <p className={`mt-3 text-[12px] leading-relaxed ${muted}`}>
+                      A model's judgement of the sources listed with this result. It is not a measurement, so check them yourself.
+                    </p>
+                  </div>
+                ) : null}
               </div>
-              )}
+
+              <div className="grid grid-cols-12 gap-8 sm:gap-10">
+                {showAnalysis && (
+                  <div className={`col-span-12 ${evidence ? 'lg:col-span-8' : ''} rounded-[1.5rem] sm:rounded-3xl border p-6 sm:p-8 md:p-12 backdrop-blur-sm ${
+                    isDark ? 'bg-gradient-to-br from-white/[0.04] to-transparent border-white/5' : 'bg-gradient-to-br from-white to-blue-50/30 border-white shadow-sm shadow-slate-200/20'
+                  }`}>
+                    {analysisNode}
+                  </div>
+                )}
+
+                {evidence && (
+                  <aside className={`col-span-12 ${showAnalysis ? 'lg:col-span-4 h-fit lg:sticky lg:top-12' : ''}`}>
+                    <EvidenceRail evidence={evidence} isDark={isDark} wide={!showAnalysis} />
+                  </aside>
+                )}
+              </div>
             </div>
-            
-            {/* CONTAINER FIX: Removed excessive transparency, added subtle premium gradient */}
-            <div className={`col-span-12 lg:col-span-8 p-6 sm:p-8 md:p-16 rounded-[1.5rem] sm:rounded-3xl border transition-all backdrop-blur-sm ${
-              isDark ? 'bg-gradient-to-br from-white/[0.04] to-transparent border-white/5' : 'bg-gradient-to-br from-white to-blue-50/30 border-white shadow-sm shadow-slate-200/20'
-            }`}>
-              {renderParsedAnalysis(data.analysis)}
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </main>
   );

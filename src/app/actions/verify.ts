@@ -3,13 +3,13 @@
 import * as cheerio from 'cheerio';
 import { generate, AppError, type ErrorKind } from '@/lib/llm';
 import { allowRequest, cacheGet, cacheKey, cacheSet, isPublicHttpUrl } from '@/lib/guard';
-import { gatherEvidence, evidenceForPrompt, evidenceOnlyText } from '@/lib/search';
-import { domainOf, isSatireDomain } from '@/lib/sources';
+import { gatherEvidence, evidenceForPrompt, evidenceOnlyText, type Evidence } from '@/lib/search';
+import { classifyDomain, domainOf, isSatireDomain } from '@/lib/sources';
 
 // Structured result so the UI can tell a real quota problem from any other failure.
 // `degraded` means the AI summary was unavailable and we returned the evidence only.
 export type VerifyResult =
-  | { ok: true; text: string; degraded?: boolean; notice?: string }
+  | { ok: true; text: string; evidence?: Evidence; degraded?: boolean; notice?: string }
   | { ok: false; kind: ErrorKind; message: string };
 
 const MAX_INPUT_LENGTH = 2000;
@@ -132,8 +132,12 @@ export async function verifyNews(rawInput: string): Promise<VerifyResult> {
     const key = cacheKey(input);
     const cached = cacheGet(key);
     if (cached) {
-      console.log('♻️ Cache hit');
-      return { ok: true, text: cached };
+      try {
+        console.log('♻️ Cache hit');
+        return JSON.parse(cached) as VerifyResult;
+      } catch {
+        // Corrupt entry: ignore it and recompute.
+      }
     }
 
     if (!(await allowRequest('verify', 6, 60_000))) {
@@ -152,8 +156,18 @@ Trust Score: 0
 
 **Sources Investigated**
 • ${input}`;
-      cacheSet(key, text);
-      return { ok: true, text };
+      const domain = domainOf(input);
+      const result: VerifyResult = {
+        ok: true,
+        text,
+        evidence: {
+          sources: [{ title: `Article on ${domain}`, url: input, description: '', domain, reputation: classifyDomain(domain) }],
+          factChecks: [],
+          provider: 'none',
+        },
+      };
+      cacheSet(key, JSON.stringify(result));
+      return result;
     }
 
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -254,6 +268,7 @@ Trust Score: 0
           ok: true,
           degraded: true,
           notice: 'AI summary unavailable. Showing the evidence only.',
+          evidence,
           text: evidenceOnlyText(evidence, reason),
         };
       }
@@ -261,8 +276,9 @@ Trust Score: 0
     }
 
     console.log('5. AI Generation Complete!');
-    cacheSet(key, text);
-    return { ok: true, text };
+    const result: VerifyResult = { ok: true, text, evidence };
+    cacheSet(key, JSON.stringify(result));
+    return result;
 
   } catch (error) {
     console.error('\n🚨 CRITICAL ERROR:', error);
