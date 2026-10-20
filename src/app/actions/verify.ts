@@ -1,8 +1,15 @@
 'use server'
 
-import { groq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
 import * as cheerio from 'cheerio';
+import { generate, AppError, type ErrorKind } from '@/lib/llm';
+import { allowRequest, cacheGet, cacheKey, cacheSet, isPublicHttpUrl } from '@/lib/guard';
+
+// Structured result so the UI can tell a real quota problem from any other failure.
+export type VerifyResult =
+  | { ok: true; text: string }
+  | { ok: false; kind: ErrorKind; message: string };
+
+const MAX_INPUT_LENGTH = 2000;
 
 // ==========================================
 // 1. TIMEOUTS & BLACKLISTS
@@ -173,14 +180,36 @@ async function fetchLiveSearchData(query: string) {
 // ==========================================
 // 3. MAIN SERVER ACTION
 // ==========================================
-export async function verifyNews(input: string) {
+export async function verifyNews(rawInput: string): Promise<VerifyResult> {
   console.log('\n--- 🚀 VERIFICATION PIPELINE START ---');
-  console.log('1. User Input:', input);
+  const input = (rawInput ?? '').trim();
+  console.log('1. User Input:', input.slice(0, 200));
 
   try {
+    if (!input) {
+      return { ok: false, kind: 'bad_input', message: 'Paste a headline or an article link first.' };
+    }
+    if (input.length > MAX_INPUT_LENGTH) {
+      return { ok: false, kind: 'bad_input', message: 'That input is too long. Paste a headline or a link.' };
+    }
     if (!process.env.GROQ_API_KEY || !process.env.BRAVE_API_KEY) {
       console.log('🚨 Missing API Keys in Environment!');
-      return 'Error: API keys missing. Check your Vercel Environment Variables.';
+      return { ok: false, kind: 'config', message: 'The server is missing an API key.' };
+    }
+    if (isURL(input) && !isPublicHttpUrl(input)) {
+      return { ok: false, kind: 'bad_input', message: 'That link cannot be checked. Use a public article URL.' };
+    }
+
+    // Repeat checks are free: serve them from the cache before touching any API.
+    const key = cacheKey(input);
+    const cached = cacheGet(key);
+    if (cached) {
+      console.log('♻️ Cache hit');
+      return { ok: true, text: cached };
+    }
+
+    if (!(await allowRequest('verify', 6, 60_000))) {
+      return { ok: false, kind: 'rate_limit', message: 'Too many checks in a minute. Wait a moment and try again.' };
     }
 
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -219,9 +248,9 @@ export async function verifyNews(input: string) {
       ? `Conduct a forensic analysis of this article to determine its historical and factual accuracy.\n\nArticle Title: ${articleTitle}\nPublished Date: ${articleDate}\nArticle Content: ${articleContent}`
       : `Conduct a forensic analysis of this headline to determine its historical and factual accuracy.\n\nHeadline: "${headline}"`;
 
-    const { text } = await generateText({
-      model: groq('llama-3.3-70b-versatile'),
-      temperature: 0.1, 
+    const text = await generate({
+      temperature: 0.1,
+      maxOutputTokens: 1500,
       system: `You are an elite, ruthlessly objective forensic journalist.
       
       CRITICAL TEMPORAL ANCHOR & REALITY CHECK:
@@ -262,17 +291,24 @@ export async function verifyNews(input: string) {
 
       **Sources Investigated**
       • List the actual URLs from the search results here as bullet points. Do not write placeholders or brackets. If you only have 1 or 2 URLs, just list those.`,
-      
       prompt: `${promptData}\n\n=== LIVE WEB SEARCH RESULTS ===\n${liveSearchContext}\n===============================\n\nBased ONLY on the live web search results above, evaluate the claim.`,
     });
 
-    if (!text || text.trim() === '') throw new Error('Groq returned an empty response.');
-
     console.log('5. AI Generation Complete!');
-    return text;
-  
+    cacheSet(key, text);
+    return { ok: true, text };
+
   } catch (error) {
     console.error('\n🚨 CRITICAL ERROR:', error);
-    return `Connection Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    if (error instanceof AppError) {
+      const message =
+        error.kind === 'rate_limit'
+          ? "We've used today's free AI quota. Please try again later."
+          : error.kind === 'config'
+            ? 'The server is missing an API key.'
+            : 'The AI service had a problem. Please try again in a moment.';
+      return { ok: false, kind: error.kind, message };
+    }
+    return { ok: false, kind: 'service', message: 'Something went wrong. Please try again.' };
   }
 }

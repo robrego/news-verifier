@@ -13,7 +13,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<{ score: number; sentiment: string; analysis: string } | null>(null);
   const [isDark, setIsDark] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'success' | 'limit'>('idle');
+  const [status, setStatus] = useState<'idle' | 'success' | 'limit' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
@@ -26,14 +27,20 @@ export default function Home() {
 
     try {
       const response = await verifyNews(input);
-      
-      if (!response || response.includes('Error') || response.includes('Connection Error') || response.includes('429')) {
-        setStatus('limit');
+
+      if (!response.ok) {
+        // Only a real quota problem gets the "limit" screen; everything else shows its own message.
+        if (response.kind === 'rate_limit') {
+          setStatus('limit');
+        } else {
+          setErrorMessage(response.message);
+          setStatus('error');
+        }
         setLoading(false);
         return;
       }
 
-      const resultText = response;
+      const resultText = response.text;
       const scoreMatch = resultText.match(/Trust Score:\s*(\d+)/i);
       const extractedScore = scoreMatch ? parseInt(scoreMatch[1], 10) : 50;
 
@@ -50,7 +57,8 @@ export default function Home() {
       setStatus('success');
     } catch (error) {
       console.error("Verification error:", error);
-      setStatus('limit');
+      setErrorMessage('Could not reach the server. Check your connection and try again.');
+      setStatus('error');
     } finally {
       setLoading(false);
     }
@@ -60,6 +68,7 @@ export default function Home() {
     setInput('');
     setData(null);
     setStatus('idle');
+    setErrorMessage('');
   };
 
   // 🧹 NEW HELPER: Splits text at periods and adds elegant paragraph spacing!
@@ -273,13 +282,20 @@ export default function Home() {
               Verify News can make mistakes. Always check critical information.
             </p>
 
+            {status === 'error' && (
+              <div role="alert" className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border ${isDark ? 'bg-rose-500/10 border-rose-500/20 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-800 shadow-sm'}`}>
+                <span className="block font-bold mb-1 uppercase tracking-wider text-[11px] opacity-80">Something went wrong</span>
+                <p className="text-[14px] sm:text-[15px] font-medium leading-relaxed">{errorMessage}</p>
+              </div>
+            )}
+
             {status === 'limit' && (
               <div className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border animate-in fade-in slide-in-from-top-4 duration-700 ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800 shadow-sm'}`}>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                   <span className="text-3xl">🪫</span>
                   <div>
                     <span className="block font-bold mb-1 uppercase tracking-wider text-[11px] opacity-80">Daily Limit Reached</span>
-                    <p className="text-[14px] sm:text-[15px] font-medium leading-relaxed">We've hit our free AI request quota for the day! Please try again tomorrow when the limits reset at midnight Pacific Time.</p>
+                    <p className="text-[14px] sm:text-[15px] font-medium leading-relaxed">We've used today's free AI quota. Please try again a bit later.</p>
                   </div>
                 </div>
               </div>
@@ -287,7 +303,7 @@ export default function Home() {
           </div>
         </section>
 
-        {data && status !== 'limit' && (
+        {data && status !== 'limit' && status !== 'error' && (
           <div className="grid grid-cols-12 gap-8 sm:gap-10 animate-in fade-in slide-in-from-bottom-12 duration-1000">
             <div className="col-span-12 lg:col-span-4 h-fit lg:sticky lg:top-12">
               <div className={`p-8 sm:p-12 rounded-[1.5rem] sm:rounded-3xl border transition-all ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>

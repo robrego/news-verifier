@@ -1,7 +1,26 @@
 'use server'
 
-import { groq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import { generate, AppError } from '@/lib/llm';
+import { allowRequest } from '@/lib/guard';
+
+const YOUTUBE_HOST = /^(www\.|m\.)?(youtube\.com|youtu\.be)$/i;
+
+function isYouTubeUrl(str: string): boolean {
+  try {
+    const url = new URL(str);
+    return (url.protocol === 'https:' || url.protocol === 'http:') && YOUTUBE_HOST.test(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function aiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof AppError) {
+    if (error.kind === 'rate_limit') return "We've used today's free AI quota. Please try again a bit later.";
+    if (error.kind === 'config') return 'The server is missing an API key.';
+  }
+  return fallback;
+}
 
 // --- PART 1: THE EXTRACTOR (SUPADATA RAPIDAPI) ---
 export async function fetchYouTubeTranscript(videoUrl: string) {
@@ -9,7 +28,13 @@ export async function fetchYouTubeTranscript(videoUrl: string) {
   
   const apiKey = process.env.RAPIDAPI_KEY;
   if (!apiKey) {
-    return { success: false, error: 'RAPIDAPI_KEY is missing from environment variables.' };
+    return { success: false, error: 'The server is missing an API key.' };
+  }
+  if (!isYouTubeUrl(videoUrl)) {
+    return { success: false, error: 'Please paste a valid YouTube link.' };
+  }
+  if (!(await allowRequest('video', 4, 60_000))) {
+    return { success: false, error: 'Too many checks in a minute. Wait a moment and try again.' };
   }
 
   try {
@@ -19,7 +44,8 @@ export async function fetchYouTubeTranscript(videoUrl: string) {
       headers: {
         'x-rapidapi-host': 'youtube-transcripts.p.rapidapi.com',
         'x-rapidapi-key': apiKey
-      }
+      },
+      signal: AbortSignal.timeout(15000)
     });
 
     if (!response.ok) {
@@ -52,9 +78,10 @@ export async function summarizeAndExtractClaims(transcript: string) {
   console.log('\n🧠 [Agent 1] Reading transcript and hunting for extreme claims...');
   
   try {
-    const { text } = await generateText({
-      model: groq('llama-3.1-8b-instant'),
-      temperature: 0.1, 
+    // 12k characters keeps a request inside the free 8K tokens-per-minute limit.
+    const text = await generate({
+      temperature: 0.1,
+      maxOutputTokens: 1200,
       system: `You are an aggressive, highly skeptical investigative journalist. 
       Your job is to read a raw video transcript and hunt for the most controversial, unbelievable, or potentially misleading claims.
 
@@ -68,7 +95,7 @@ export async function summarizeAndExtractClaims(transcript: string) {
         "summary": "Your summary here.",
         "claims": ["Exact quote 1", "Exact quote 2", "Exact quote 3"]
       }`,
-      prompt: `Transcript:\n\n${transcript.substring(0, 20000)}`, 
+      prompt: `Transcript:\n\n${transcript.substring(0, 12000)}`,
     });
 
     let cleanedText = text.trim();
@@ -92,8 +119,8 @@ export async function summarizeAndExtractClaims(transcript: string) {
     return { success: true, data: parsedData };
 
   } catch (error) {
-    console.error('❌ [Agent 1] JSON Parse Error:', error);
-    return { success: false, error: 'Agent 1 failed to format the claims correctly.' };
+    console.error('❌ [Agent 1] Error:', error);
+    return { success: false, error: aiErrorMessage(error, 'Could not extract claims from this video. Please try again.') };
   }
 }
 
@@ -103,7 +130,7 @@ export async function searchBraveForClaims(claims: string[]) {
   const apiKey = process.env.BRAVE_API_KEY;
 
   if (!apiKey) {
-    return { success: false, error: 'Brave API key is missing from .env.local' };
+    return { success: false, error: 'The server is missing an API key.' };
   }
 
   try {
@@ -115,7 +142,9 @@ export async function searchBraveForClaims(claims: string[]) {
           'Accept': 'application/json',
           'Accept-Encoding': 'gzip',
           'X-Subscription-Token': apiKey
-        }
+        },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(8000)
       });
 
       if (!response.ok) {
@@ -145,9 +174,9 @@ export async function generateFinalVerdict(summary: string, claims: string[], ev
   console.log('\n⚖️ [Agent 3] Weighing the evidence and generating final verdict...');
   
   try {
-    const { text } = await generateText({
-      model: groq('llama-3.1-8b-instant'),
-      temperature: 0.2, 
+    const text = await generate({
+      temperature: 0.2,
+      maxOutputTokens: 1500,
       system: `You are a world-class investigative journalist and fact-checker. 
 
       WRITING STYLE RULES:
@@ -180,6 +209,6 @@ export async function generateFinalVerdict(summary: string, claims: string[], ev
 
   } catch (error) {
     console.error('❌ [Agent 3] Failed:', error);
-    return { success: false, error: 'Agent 3 failed.' };
+    return { success: false, error: aiErrorMessage(error, 'Could not generate the verdict. Please try again.') };
   }
 }
