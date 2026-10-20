@@ -4,12 +4,13 @@ import * as cheerio from 'cheerio';
 import { generate, AppError, type ErrorKind } from '@/lib/llm';
 import { allowRequest, cacheGet, cacheKey, cacheSet, isPublicHttpUrl } from '@/lib/guard';
 import { gatherEvidence, evidenceForPrompt, evidenceOnlyText, type Evidence } from '@/lib/search';
+import { createShareToken } from '@/lib/share';
 import { classifyDomain, domainOf, isSatireDomain } from '@/lib/sources';
 
 // Structured result so the UI can tell a real quota problem from any other failure.
 // `degraded` means the AI summary was unavailable and we returned the evidence only.
 export type VerifyResult =
-  | { ok: true; text: string; evidence?: Evidence; degraded?: boolean; notice?: string }
+  | { ok: true; text: string; evidence?: Evidence; degraded?: boolean; notice?: string; share?: string }
   | { ok: false; kind: ErrorKind; message: string };
 
 const MAX_INPUT_LENGTH = 2000;
@@ -166,6 +167,7 @@ Trust Score: 0
           provider: 'none',
         },
       };
+      result.share = createShareToken({ query: input, text, evidence: result.evidence }) ?? undefined;
       cacheSet(key, JSON.stringify(result));
       return result;
     }
@@ -276,7 +278,7 @@ Trust Score: 0
     }
 
     console.log('5. AI Generation Complete!');
-    const result: VerifyResult = { ok: true, text, evidence };
+    const result: VerifyResult = { ok: true, text, evidence, share: createShareToken({ query: input, text, evidence }) ?? undefined };
     cacheSet(key, JSON.stringify(result));
     return result;
 
