@@ -361,14 +361,14 @@ export default function Home() {
                 ) : band && tone && band.tone !== 'slate' && band.label !== 'Satire' ? (
                   <div className="mt-8 max-w-md">
                     <div className="flex items-baseline justify-between">
-                      <span className={`text-[11px] font-bold uppercase tracking-[0.2em] ${muted}`}>AI estimate</span>
+                      <span className={`text-[11px] font-bold uppercase tracking-[0.2em] ${muted}`}>Likelihood it is true</span>
                       <span className={`text-sm font-bold tabular-nums ${muted}`}>{data.score} / 100</span>
                     </div>
                     <div className={`mt-2 h-1.5 overflow-hidden rounded-full ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}>
                       <div className={`h-full transition-all duration-[1.5s] ${tone.bar}`} style={{ width: `${data.score}%` }} />
                     </div>
                     <p className={`mt-3 text-[12px] leading-relaxed ${muted}`}>
-                      A model's judgement of the sources listed with this result. It is not a measurement, so check them yourself.
+                      An AI estimate based on the sources listed with this result. It is not a measurement, so check them yourself.
                     </p>
                   </div>
                 ) : null}

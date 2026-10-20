@@ -2,10 +2,11 @@
 
 import type { Evidence } from '@/lib/search';
 
-type Tier = 'established' | 'tabloid' | 'satire' | 'unknown';
+type Tier = 'established' | 'reference' | 'tabloid' | 'satire' | 'unknown';
 
 const BADGE: Record<Tier, { light: string; dark: string }> = {
   established: { light: 'bg-blue-50 text-blue-600 border-blue-100', dark: 'bg-blue-500/10 text-blue-300 border-blue-500/20' },
+  reference: { light: 'bg-indigo-50 text-indigo-600 border-indigo-100', dark: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20' },
   tabloid: { light: 'bg-amber-50 text-amber-700 border-amber-100', dark: 'bg-amber-500/10 text-amber-300 border-amber-500/20' },
   satire: { light: 'bg-rose-50 text-rose-600 border-rose-100', dark: 'bg-rose-500/10 text-rose-300 border-rose-500/20' },
   unknown: { light: 'bg-slate-50 text-slate-500 border-slate-200', dark: 'bg-white/5 text-slate-400 border-white/10' },
@@ -13,6 +14,7 @@ const BADGE: Record<Tier, { light: string; dark: string }> = {
 
 const SHORT_LABEL: Record<Tier, string> = {
   established: 'Established',
+  reference: 'Reference',
   tabloid: 'Tabloid style',
   satire: 'Satire',
   unknown: 'Unrated',

@@ -28,6 +28,14 @@ function stripTags(s: unknown): string {
   return String(s ?? '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").trim();
 }
 
+// Search engines sometimes index bot-check pages instead of the article. Drop that text.
+const INTERSTITIAL = /checking your browser|just a moment|enable javascript|access denied|verify you are (a )?human|captcha|attention required/i;
+
+function cleanSnippet(s: unknown): string {
+  const text = stripTags(s);
+  return INTERSTITIAL.test(text) ? '' : text;
+}
+
 // ---------- Provider 1: Brave (needs BRAVE_API_KEY) ----------
 async function searchBrave(query: string): Promise<Source[]> {
   const key = process.env.BRAVE_API_KEY;
@@ -48,9 +56,9 @@ async function searchBrave(query: string): Promise<Source[]> {
     if (!item.url) return [];
     const domain = domainOf(item.url);
     return [{
-      title: stripTags(item.title) || domain,
+      title: cleanSnippet(item.title) || domain,
       url: item.url,
-      description: stripTags(item.description),
+      description: cleanSnippet(item.description),
       domain,
       reputation: classifyDomain(domain),
     }];
@@ -88,7 +96,7 @@ async function searchGdelt(query: string): Promise<Source[]> {
     if (!item.url) return [];
     const domain = domainOf(item.url) || String(item.domain ?? '');
     return [{
-      title: stripTags(item.title) || domain,
+      title: cleanSnippet(item.title) || domain,
       url: item.url,
       description: '',
       domain,
