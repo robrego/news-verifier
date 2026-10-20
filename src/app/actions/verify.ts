@@ -3,10 +3,13 @@
 import * as cheerio from 'cheerio';
 import { generate, AppError, type ErrorKind } from '@/lib/llm';
 import { allowRequest, cacheGet, cacheKey, cacheSet, isPublicHttpUrl } from '@/lib/guard';
+import { gatherEvidence, evidenceForPrompt, evidenceOnlyText } from '@/lib/search';
+import { domainOf, isSatireDomain } from '@/lib/sources';
 
 // Structured result so the UI can tell a real quota problem from any other failure.
+// `degraded` means the AI summary was unavailable and we returned the evidence only.
 export type VerifyResult =
-  | { ok: true; text: string }
+  | { ok: true; text: string; degraded?: boolean; notice?: string }
   | { ok: false; kind: ErrorKind; message: string };
 
 const MAX_INPUT_LENGTH = 2000;
@@ -15,8 +18,6 @@ const MAX_INPUT_LENGTH = 2000;
 // 1. TIMEOUTS & BLACKLISTS
 // ==========================================
 const SCRAPER_TIMEOUT_MS = 6000;
-const PING_TIMEOUT_MS = 3500; // Increased for Vercel's Edge network
-const BLACKLISTED_DOMAINS = /change\.org|petition|museum|facebook\.com|twitter\.com|x\.com|instagram\.com/i;
 
 // ==========================================
 // 2. HELPER FUNCTIONS
@@ -49,31 +50,6 @@ function extractHeadlineFromURL(url: string): string {
     return text || url;
   } catch {
     return url;
-  }
-}
-
-async function isLinkAlive(url: string): Promise<boolean> {
-  try {
-    const response = await fetch(url, { 
-      method: 'HEAD', 
-      headers: { 
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml'
-      },
-      signal: AbortSignal.timeout(PING_TIMEOUT_MS),
-      next: { revalidate: 3600 } 
-    });
-
-    if (response.status === 404 || response.status === 410) {
-      console.log(`   [Link Checker] ❌ 404/410 Dead Link: ${url}`);
-      return false;
-    }
-
-    return true;
-
-  } catch {
-    console.log(`   [Link Checker] ❌ Timeout/Blocked: ${url}`);
-    return false;
   }
 }
 
@@ -129,54 +105,6 @@ async function fetchArticleContent(url: string): Promise<{ title: string; conten
   }
 }
 
-async function fetchLiveSearchData(query: string) {
-  console.log(`\n   [Brave] 🔎 Searching live web for: "${query}"`);
-  try {
-    const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=20`, {
-      headers: {
-        'Accept': 'application/json',
-        'X-Subscription-Token': process.env.BRAVE_API_KEY!,
-      },
-      cache: 'no-store', // 🚨 THE FIX: Never cache search results
-      signal: AbortSignal.timeout(6000) 
-    });
-    
-    // 🚨 NEW FIX: Capture the exact HTTP Status code and error reason from Brave
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Status: ${res.status}. Details: ${errorText}`);
-    }
-
-    const data = await res.json();
-    const rawResults = data.web?.results || [];
-
-    const validCandidates = rawResults.filter((r: any) => !BLACKLISTED_DOMAINS.test(r.url));
-    
-    const aliveChecks = await Promise.all(
-      validCandidates.slice(0, 10).map(async (r: any) => {
-        const isAlive = await isLinkAlive(r.url);
-        return isAlive ? r : null;
-      })
-    );
-
-    let verified = aliveChecks.filter(r => r !== null).slice(0, 3);
-    
-    // The Vercel Safety Net
-    if (verified.length === 0 && validCandidates.length > 0) {
-      console.log(`   [Brave] ⚠️ All links timed out on Vercel. Falling back to raw search results.`);
-      verified = validCandidates.slice(0, 3);
-    } else {
-      console.log(`   [Brave] ✅ Found ${verified.length} verified, live URLs.`);
-    }
-    
-    let formattedData = verified.map((v, i) => `Source ${i + 1}:\nTitle: ${v.title}\nURL: ${v.url}\nSnippet: ${v.description}`).join('\n\n');
-    return formattedData || "No live data found.";
-  } catch (error) {
-    console.error(`   [Brave] ❌ Search error:`, error);
-    return "Live search failed. Unable to verify current events.";
-  }
-}
-
 // ==========================================
 // 3. MAIN SERVER ACTION
 // ==========================================
@@ -192,9 +120,9 @@ export async function verifyNews(rawInput: string): Promise<VerifyResult> {
     if (input.length > MAX_INPUT_LENGTH) {
       return { ok: false, kind: 'bad_input', message: 'That input is too long. Paste a headline or a link.' };
     }
-    if (!process.env.GROQ_API_KEY || !process.env.BRAVE_API_KEY) {
-      console.log('🚨 Missing API Keys in Environment!');
-      return { ok: false, kind: 'config', message: 'The server is missing an API key.' };
+    if (!process.env.GROQ_API_KEY) {
+      // Not fatal any more: we can still return evidence without the AI summary.
+      console.warn('⚠️ GROQ_API_KEY is missing. Running in evidence-only mode.');
     }
     if (isURL(input) && !isPublicHttpUrl(input)) {
       return { ok: false, kind: 'bad_input', message: 'That link cannot be checked. Use a public article URL.' };
@@ -210,6 +138,22 @@ export async function verifyNews(rawInput: string): Promise<VerifyResult> {
 
     if (!(await allowRequest('verify', 6, 60_000))) {
       return { ok: false, kind: 'rate_limit', message: 'Too many checks in a minute. Wait a moment and try again.' };
+    }
+
+    // Known satire sites need no search and no AI: answer locally, instantly and for free.
+    if (isURL(input) && isSatireDomain(domainOf(input))) {
+      const text = `This is a satirical article from ${domainOf(input)}, a site that publishes parody as entertainment.
+
+Trust Score: 0
+
+**Source Reliability & Verdict**
+• ${domainOf(input)} is a known satire or parody site.
+• Its stories are written to be funny, not to report real events.
+
+**Sources Investigated**
+• ${input}`;
+      cacheSet(key, text);
+      return { ok: true, text };
     }
 
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -239,7 +183,9 @@ export async function verifyNews(rawInput: string): Promise<VerifyResult> {
 
     // STEP 2: MANDATORY LIVE SEARCH (Retrieve)
     console.log('3. Search: Fetching cross-reference data...');
-    const liveSearchContext = await fetchLiveSearchData(headline);
+    const evidence = await gatherEvidence(headline);
+    console.log(`   [Evidence] ${evidence.sources.length} sources via ${evidence.provider}, ${evidence.factChecks.length} fact-checks`);
+    const liveSearchContext = evidenceForPrompt(evidence);
 
     // STEP 3: AI GENERATION (Generate)
     console.log('4. AI: Sending consolidated data to Groq...');
@@ -248,7 +194,9 @@ export async function verifyNews(rawInput: string): Promise<VerifyResult> {
       ? `Conduct a forensic analysis of this article to determine its historical and factual accuracy.\n\nArticle Title: ${articleTitle}\nPublished Date: ${articleDate}\nArticle Content: ${articleContent}`
       : `Conduct a forensic analysis of this headline to determine its historical and factual accuracy.\n\nHeadline: "${headline}"`;
 
-    const text = await generate({
+    let text: string;
+    try {
+    text = await generate({
       temperature: 0.1,
       maxOutputTokens: 1500,
       system: `You are an elite, ruthlessly objective forensic journalist.
@@ -266,6 +214,7 @@ export async function verifyNews(rawInput: string): Promise<VerifyResult> {
       4. THE ESCAPE HATCH: If the live search data says "No live data found", output: "Inconclusive: Insufficient live data to verify."
       5. NEVER start your response with the word "Error".
       6. SATIRE & PARODY DETECTION: Actively evaluate the source domain and the tone of the claim. If the source is a known satirical outlet (e.g., The Onion, De Speld, Babylon Bee) or the claim is obvious parody, explicitly state "This is a satirical article" in your summary. Give it a Trust Score of 0, and use the bullet points to explain the joke rather than literally fact-checking it.
+      7. Each source carries a general "Outlet reputation" label. Treat it as context only, never as proof that a claim is true or false. If "Existing professional fact-checks" are listed, weigh them heavily and name the publisher.
       
       Structure your response EXACTLY in this format:
 
@@ -293,6 +242,23 @@ export async function verifyNews(rawInput: string): Promise<VerifyResult> {
       • List the actual URLs from the search results here as bullet points. Do not write placeholders or brackets. If you only have 1 or 2 URLs, just list those.`,
       prompt: `${promptData}\n\n=== LIVE WEB SEARCH RESULTS ===\n${liveSearchContext}\n===============================\n\nBased ONLY on the live web search results above, evaluate the claim.`,
     });
+    } catch (aiError) {
+      // The AI step failed (quota, outage, missing key). Keep the user's check useful.
+      if (aiError instanceof AppError && evidence.sources.length + evidence.factChecks.length > 0) {
+        const reason =
+          aiError.kind === 'rate_limit'
+            ? "Today's free AI quota is used up, so there is no AI summary."
+            : 'The AI summary is unavailable right now.';
+        console.warn('⚠️ Serving evidence-only result:', aiError.kind);
+        return {
+          ok: true,
+          degraded: true,
+          notice: 'AI summary unavailable. Showing the evidence only.',
+          text: evidenceOnlyText(evidence, reason),
+        };
+      }
+      throw aiError;
+    }
 
     console.log('5. AI Generation Complete!');
     cacheSet(key, text);

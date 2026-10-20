@@ -11,7 +11,7 @@ const isVideo = false;
 export default function Home() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<{ score: number; sentiment: string; analysis: string } | null>(null);
+  const [data, setData] = useState<{ score: number; sentiment: string; analysis: string; degraded?: boolean; notice?: string } | null>(null);
   const [isDark, setIsDark] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'limit' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -51,7 +51,9 @@ export default function Home() {
       setData({
         score: extractedScore,
         sentiment: sentiment,
-        analysis: resultText
+        analysis: resultText,
+        degraded: response.degraded,
+        notice: response.notice
       });
       
       setStatus('success');
@@ -306,6 +308,13 @@ export default function Home() {
         {data && status !== 'limit' && status !== 'error' && (
           <div className="grid grid-cols-12 gap-8 sm:gap-10 animate-in fade-in slide-in-from-bottom-12 duration-1000">
             <div className="col-span-12 lg:col-span-4 h-fit lg:sticky lg:top-12">
+              {data.degraded ? (
+                <div className={`p-8 sm:p-10 rounded-[1.5rem] sm:rounded-3xl border ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                  <span className="block text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.2em] opacity-80">Evidence only</span>
+                  <p className="mt-4 text-[15px] font-medium leading-relaxed">{data.notice ?? 'The AI summary is unavailable right now.'}</p>
+                  <p className="mt-3 text-[13px] leading-relaxed opacity-80">No trust score is shown because it would be a guess without the AI step.</p>
+                </div>
+              ) : (
               <div className={`p-8 sm:p-12 rounded-[1.5rem] sm:rounded-3xl border transition-all ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>
                 <span className="text-[11px] sm:text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em]">Trust Magnitude</span>
                 <div className={`mt-8 sm:mt-10 text-[100px] sm:text-[140px] font-bold leading-none tracking-tighter transition-colors duration-1000 ${
@@ -332,6 +341,7 @@ export default function Home() {
                   </span>
                 </div>
               </div>
+              )}
             </div>
             
             {/* CONTAINER FIX: Removed excessive transparency, added subtle premium gradient */}
