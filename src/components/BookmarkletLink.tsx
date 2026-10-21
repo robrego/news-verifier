@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { Bookmark } from 'lucide-react';
 
 // React refuses javascript: URLs passed as props, so the href is set on the element directly.
 export function BookmarkletLink() {
@@ -23,8 +24,9 @@ export function BookmarkletLink() {
         e.preventDefault();
       }}
       draggable
-      className="inline-block cursor-grab rounded-2xl bg-slate-950 px-6 py-4 text-[13px] font-bold uppercase tracking-[0.15em] text-white shadow-lg shadow-blue-500/10 hover:bg-blue-600 active:cursor-grabbing"
+      className="font-display inline-flex cursor-grab items-center gap-2 rounded-2xl bg-slate-950 px-6 py-4 text-[14px] font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-blue-500/10 hover:bg-blue-600 active:cursor-grabbing"
     >
+      <Bookmark className="h-4 w-4" aria-hidden />
       Verify this page
     </a>
   );

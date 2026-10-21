@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { verifyNews } from '@/app/actions/verify';
-import { Space_Grotesk } from 'next/font/google';
+import { BatteryLow, CircleAlert, ImagePlus, Loader2, Moon, Newspaper, Sun, Video, Wrench } from 'lucide-react';
 import Link from 'next/link';
 import { ResultView, type ResultData } from '@/components/ResultView';
 import { scoreOf, sentimentOf, getBand } from '@/lib/result';
 import { EmptyState } from '@/components/EmptyState';
 import { saveToHistory } from '@/lib/history';
 
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
 const isVideo = false;
 
 export default function Home() {
@@ -142,51 +141,56 @@ export default function Home() {
   };
 
   return (
-    <main className={`min-h-screen relative p-4 sm:p-6 lg:p-24 transition-colors duration-700 ${spaceGrotesk.className} ${isDark ? 'bg-[#0A0A0B] text-white' : 'bg-[#F9FAFF] text-slate-900'}`}>
+    <main className={`min-h-screen relative p-4 sm:p-6 lg:p-24 transition-colors duration-700 ${isDark ? 'bg-[#0A0A0B] text-white' : 'bg-[#F9FAFF] text-slate-900'}`}>
       <div className="max-w-7xl mx-auto">
-      <header className="mb-20 sm:mb-32 flex items-center justify-between w-full">
-  {/* Left: Status Badge */}
-  <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all ${
-    isDark ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-  }`}>
-    <span className={`w-2 h-2 rounded-full animate-pulse ${isVideo ? 'bg-purple-500' : 'bg-blue-500'}`} />
-    {isVideo ? 'Video Deep Dive' : 'Verify News'}
-  </div>
+      <header className="mb-16 sm:mb-28 flex items-center justify-between gap-4 w-full">
+        <div className={`font-display flex items-center gap-2 whitespace-nowrap px-3 py-1.5 rounded-full border text-[12px] font-bold uppercase tracking-[0.12em] transition-all ${
+          isDark ? 'bg-white/5 border-white/15 text-slate-200' : 'bg-white border-slate-200 text-slate-700'
+        }`}>
+          <span className="w-2 h-2 rounded-full animate-pulse bg-blue-500" />
+          Verify News
+        </div>
 
-  {/* Right Side Group */}
-  <div className="flex items-center gap-6 sm:gap-10">
-    <nav className="flex gap-6 sm:gap-8">
-      <Link href="/" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${
-        !isVideo ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500')
-      }`}>
-        News
-      </Link>
-      <Link href="/video" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${
-        isVideo ? (isDark ? 'text-white' : 'text-purple-600') : (isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500')
-      }`}>
-        Videos
-      </Link>
-      <Link href="/tools" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'}`}>
-        Tools
-      </Link>
-    </nav>
+        <div className="flex items-center gap-4 sm:gap-8">
+          <nav className="flex gap-4 sm:gap-7">
+            {[
+              { href: '/', label: 'News', Icon: Newspaper, active: true },
+              { href: '/video', label: 'Videos', Icon: Video, active: false },
+              { href: '/tools', label: 'Tools', Icon: Wrench, active: false },
+            ].map(({ href, label, Icon, active }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`font-display flex items-center gap-1.5 text-[12px] sm:text-[13px] font-bold uppercase tracking-[0.12em] transition-all ${
+                  active
+                    ? (isDark ? 'text-white' : 'text-blue-700')
+                    : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')
+                }`}
+              >
+                <Icon className="hidden h-4 w-4 sm:block" aria-hidden />
+                {label}
+              </Link>
+            ))}
+          </nav>
 
-    {/* The Switch - Fixed with 'left' positioning instead of translate for better precision */}
-    <button 
-      onClick={() => setIsDark(!isDark)} 
-      className={`relative flex items-center w-11 h-6 rounded-full border transition-all duration-500 ${
-        isDark ? 'bg-zinc-800 border-white/10' : 'bg-slate-200 border-slate-300'
-      }`}
-    >
-      <div className={`absolute w-4 h-4 rounded-full transition-all duration-300 shadow-sm ${
-        isDark ? 'left-[22px] bg-blue-500' : 'left-[4px] bg-white'
-      }`} />
-    </button>
-  </div>
-</header>
+          <button
+            onClick={() => setIsDark(!isDark)}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className={`relative flex items-center w-12 h-7 rounded-full border transition-all duration-500 ${
+              isDark ? 'bg-zinc-800 border-white/15' : 'bg-slate-200 border-slate-300'
+            }`}
+          >
+            <span className={`absolute flex h-5 w-5 items-center justify-center rounded-full transition-all duration-300 shadow-sm ${
+              isDark ? 'left-[24px] bg-blue-500 text-white' : 'left-[4px] bg-white text-amber-500'
+            }`}>
+              {isDark ? <Moon className="h-3 w-3" aria-hidden /> : <Sun className="h-3 w-3" aria-hidden />}
+            </span>
+          </button>
+        </div>
+      </header>
 
         <section className="mb-20 sm:mb-32">
-          <h1 className={`text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[110px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+          <h1 className={`font-display text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[110px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
             Is this <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent pr-2">Real?</span>
           </h1>
           
@@ -219,7 +223,7 @@ export default function Home() {
               {data || status === 'limit' ? (
                 <button 
                   onClick={handleClear} 
-                  className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.15em] transition-all active:scale-95 flex-shrink-0 ${isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+                  className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 font-display rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.12em] inline-flex items-center justify-center gap-2 transition-all active:scale-95 flex-shrink-0 ${isDark ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-200 text-slate-800 hover:bg-slate-300'}`}
                 >
                   Clear
                 </button>
@@ -227,42 +231,46 @@ export default function Home() {
                 <button 
                   onClick={() => handleVerify()} 
                   disabled={loading || !input} 
-                  className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.15em] transition-all active:scale-95 flex-shrink-0 ${isDark ? 'bg-blue-500 text-white hover:bg-blue-400 disabled:bg-blue-500/50' : 'bg-slate-950 text-white hover:bg-blue-500 disabled:bg-slate-400'}`}
+                  className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 font-display rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.12em] inline-flex items-center justify-center gap-2 transition-all active:scale-95 flex-shrink-0 ${isDark ? 'bg-blue-500 text-white hover:bg-blue-400 disabled:bg-blue-500/50' : 'bg-slate-950 text-white hover:bg-blue-500 disabled:bg-slate-400'}`}
                 >
-                  {loading ? 'Analyzing...' : 'Verify'}
+                  {loading && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
+                  {loading ? 'Analyzing' : 'Verify'}
                 </button>
               )}
             </div>
 
-            <p className={`mt-4 sm:mt-5 text-center text-[11px] sm:text-[12px] font-medium tracking-wide ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              Verify News can make mistakes. Always check critical information.
-            </p>
-
-            <div className="mt-3 flex justify-center">
+            <div className="mt-4 sm:mt-5 flex flex-col items-start gap-3 text-left">
+              <p className={`text-[14px] leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                Verify News can make mistakes. Always check critical information.
+              </p>
               <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => handleImage(e.target.files?.[0])} />
               <button
                 onClick={() => fileRef.current?.click()}
                 disabled={reading || loading}
-                className={`text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.15em] underline-offset-4 hover:underline disabled:opacity-50 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}
+                className={`font-display inline-flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.12em] underline-offset-4 hover:underline disabled:opacity-50 ${isDark ? 'text-blue-300' : 'text-blue-700'}`}
               >
-                {reading ? 'Reading screenshot...' : 'Or check a screenshot of a post'}
+                {reading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <ImagePlus className="h-4 w-4" aria-hidden />}
+                {reading ? 'Reading screenshot' : 'Or check a screenshot of a post'}
               </button>
             </div>
 
             {status === 'error' && (
               <div role="alert" className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border ${isDark ? 'bg-rose-500/10 border-rose-500/20 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-800 shadow-sm'}`}>
-                <span className="block font-bold mb-1 uppercase tracking-wider text-[11px] opacity-80">Something went wrong</span>
-                <p className="text-[14px] sm:text-[15px] font-medium leading-relaxed">{errorMessage}</p>
+                <span className="font-display flex items-center gap-2 font-bold mb-2 uppercase tracking-[0.12em] text-[12px]">
+                  <CircleAlert className="h-4 w-4" aria-hidden />
+                  Something went wrong
+                </span>
+                <p className="text-[15px] sm:text-[16px] leading-relaxed">{errorMessage}</p>
               </div>
             )}
 
             {status === 'limit' && (
               <div className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border animate-in fade-in slide-in-from-top-4 duration-700 ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800 shadow-sm'}`}>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-                  <span className="text-3xl">🪫</span>
+                  <BatteryLow className="h-9 w-9 shrink-0" aria-hidden />
                   <div>
-                    <span className="block font-bold mb-1 uppercase tracking-wider text-[11px] opacity-80">Daily Limit Reached</span>
-                    <p className="text-[14px] sm:text-[15px] font-medium leading-relaxed">We've used today's free AI quota. Please try again a bit later.</p>
+                    <span className="font-display block font-bold mb-1 uppercase tracking-[0.12em] text-[12px]">Daily limit reached</span>
+                    <p className="text-[15px] sm:text-[16px] leading-relaxed">We&apos;ve used today&apos;s free AI quota. Please try again a bit later.</p>
                   </div>
                 </div>
               </div>
