@@ -2,11 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { fetchYouTubeTranscript, summarizeAndExtractClaims, searchBraveForClaims, generateFinalVerdict } from '../actions/verifyVideo';
-import { Space_Grotesk } from 'next/font/google';
+import { SiteHeader, useTheme } from '@/components/SiteHeader';
 import Link from 'next/link';
 
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
-const isVideo = true;
 
 export default function VideoDeepDive() {
   const [url, setUrl] = useState('');
@@ -18,11 +16,7 @@ export default function VideoDeepDive() {
   const [claims, setClaims] = useState<string[]>([]);
   const [finalData, setFinalData] = useState<{ score: number; sentiment: string; analysis: string } | null>(null);
   
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark);
-  }, [isDark]);
+  const [isDark, setIsDark] = useTheme();
 
   // The Standard Pipeline
   const handleDeepDive = async (e: React.FormEvent) => {
@@ -159,7 +153,7 @@ export default function VideoDeepDive() {
             return (
               <div key={i} className="col-span-12 mt-10 sm:mt-14 mb-6 sm:mb-8 flex items-center gap-4 sm:gap-5">
                 <span className={`w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center text-lg border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-100'} ${color}`}>{icon}</span>
-                <h3 className={`font-bold text-[11px] sm:text-[12px] uppercase tracking-[0.2em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{title}</h3>
+                <h3 className={`font-display font-bold text-[12px] sm:text-[13px] uppercase tracking-[0.14em] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{title}</h3>
                 <div className={`flex-grow h-[1px] ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}></div>
               </div>
             );
@@ -188,7 +182,7 @@ export default function VideoDeepDive() {
                       </div>
                       <div className="flex items-start gap-4 sm:gap-5">
                         <div className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0 mt-2" />
-                        <p className={`text-[1rem] sm:text-[1.05rem] leading-relaxed font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <p className={`text-[1rem] sm:text-[1.05rem] leading-relaxed font-normal ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                           {formatSentences(realityAnalysis)}
                         </p>
                       </div>
@@ -222,48 +216,12 @@ export default function VideoDeepDive() {
   };
 
   return (
-    <main className={`min-h-screen relative p-4 sm:p-6 lg:p-24 transition-colors duration-700 ${spaceGrotesk.className} ${isDark ? 'bg-[#0A0A0B] text-white' : 'bg-[#F9FAFF] text-slate-900'}`}>
+    <main className={`min-h-screen relative p-4 sm:p-6 lg:p-24 transition-colors duration-700 ${isDark ? 'bg-[#0A0A0B] text-white' : 'bg-[#F9FAFF] text-slate-900'}`}>
       <div className="max-w-7xl mx-auto">
-      <header className="mb-20 sm:mb-32 flex items-center justify-between w-full">
-  {/* Left: Status Badge */}
-  <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all ${
-    isDark ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-  }`}>
-    <span className={`w-2 h-2 rounded-full animate-pulse ${isVideo ? 'bg-purple-500' : 'bg-blue-500'}`} />
-    {isVideo ? 'Video Deep Dive' : 'Verify News'}
-  </div>
-
-  {/* Right Side Group */}
-  <div className="flex items-center gap-6 sm:gap-10">
-    <nav className="flex gap-6 sm:gap-8">
-      <Link href="/" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${
-        !isVideo ? (isDark ? 'text-white' : 'text-blue-600') : (isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500')
-      }`}>
-        News
-      </Link>
-      <Link href="/video" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${
-        isVideo ? (isDark ? 'text-white' : 'text-purple-600') : (isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500')
-      }`}>
-        Videos
-      </Link>
-    </nav>
-
-    {/* The Switch - Fixed with 'left' positioning instead of translate for better precision */}
-    <button 
-      onClick={() => setIsDark(!isDark)} 
-      className={`relative flex items-center w-11 h-6 rounded-full border transition-all duration-500 ${
-        isDark ? 'bg-zinc-800 border-white/10' : 'bg-slate-200 border-slate-300'
-      }`}
-    >
-      <div className={`absolute w-4 h-4 rounded-full transition-all duration-300 shadow-sm ${
-        isDark ? 'left-[22px] bg-blue-500' : 'left-[4px] bg-white'
-      }`} />
-    </button>
-  </div>
-</header>
+      <SiteHeader isDark={isDark} onToggle={() => setIsDark(!isDark)} active="video" />
 
         <section className="mb-16">
-          <h1 className={`text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[110px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
+          <h1 className={`font-display text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[110px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
             Analyze <span className="bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent pr-2">Video.</span>
           </h1>
           
@@ -279,11 +237,11 @@ export default function VideoDeepDive() {
               </div>
 
               {step === 5 || step === -1 ? (
-                <button type="button" onClick={handleClear} className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.15em] transition-all flex-shrink-0 ${isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}>
+                <button type="button" onClick={handleClear} className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 font-display rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.12em] transition-all flex-shrink-0 ${isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}>
                   Clear
                 </button>
               ) : (
-                <button type="submit" disabled={step > 0 || !url} className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.15em] transition-all flex-shrink-0 ${isDark ? 'bg-blue-500 text-white hover:bg-blue-400 disabled:bg-blue-500/50' : 'bg-slate-950 text-white hover:bg-blue-500 disabled:bg-slate-400'}`}>
+                <button type="submit" disabled={step > 0 || !url} className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 font-display rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.12em] transition-all flex-shrink-0 ${isDark ? 'bg-blue-500 text-white hover:bg-blue-400 disabled:bg-blue-500/50' : 'bg-slate-950 text-white hover:bg-blue-500 disabled:bg-slate-400'}`}>
                   {step > 0 ? 'Analyzing...' : 'Deep Dive'}
                 </button>
               )}
@@ -294,7 +252,7 @@ export default function VideoDeepDive() {
         {/* 🚀 NEW: The Manual Override Box */}
         {error && (
           <div className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border animate-in fade-in max-w-4xl ${isDark ? 'bg-rose-500/10 border-rose-500/20 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-800 shadow-sm'}`}>
-            <span className="font-bold uppercase tracking-wider text-[11px] opacity-80 flex items-center gap-2">
+            <span className="font-display font-bold uppercase tracking-[0.12em] text-[12px] flex items-center gap-2">
               ⚠️ Anti-Bot Protection Triggered
             </span>
             <p className="text-[14px] sm:text-[15px] font-medium mt-3 mb-5 leading-relaxed">
@@ -318,7 +276,7 @@ export default function VideoDeepDive() {
 
 {(step > 0 && step < 5) && (
           <div className={`max-w-4xl p-8 sm:p-12 rounded-[1.5rem] sm:rounded-3xl border transition-all animate-in fade-in ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>
-            <h3 className={`font-bold text-[12px] uppercase tracking-[0.2em] mb-10 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Intelligence Engine Active</h3>
+            <h3 className={`font-display font-bold text-[12px] uppercase tracking-[0.2em] mb-10 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Intelligence Engine Active</h3>
             <div className="space-y-8">
               <div className="flex items-center gap-5">
                 {step === 1 ? <span className="animate-pulse w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" /> : <span className="text-blue-500 text-xl">✓</span>}
@@ -344,7 +302,7 @@ export default function VideoDeepDive() {
           <div className="grid grid-cols-12 gap-8 sm:gap-10 animate-in fade-in slide-in-from-bottom-12 duration-1000">
             <div className="col-span-12 lg:col-span-4 h-fit lg:sticky lg:top-12">
               <div className={`p-8 sm:p-12 rounded-[1.5rem] sm:rounded-3xl border transition-all ${isDark ? 'bg-[#151517] border-white/5' : 'bg-white border-slate-100 shadow-sm shadow-blue-500/[0.02]'}`}>
-                <span className="text-[11px] sm:text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em]">Trust Magnitude</span>
+                <span className="font-display text-[12px] sm:text-[13px] font-bold text-slate-500 uppercase tracking-[0.14em]">Trust Magnitude</span>
                 <div className={`mt-8 sm:mt-10 text-[100px] sm:text-[140px] font-bold leading-none tracking-tighter transition-colors duration-1000 ${
                   finalData.score > 70 ? 'text-blue-500' : finalData.score > 40 ? 'text-amber-500' : 'text-rose-600'
                 }`}>
@@ -356,7 +314,7 @@ export default function VideoDeepDive() {
                       finalData.score > 70 ? 'bg-blue-500' : finalData.score > 40 ? 'bg-amber-400' : 'bg-rose-500'
                     }`} style={{ width: `${finalData.score}%` }} />
                   </div>
-                  <span className={`inline-block text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.15em] px-6 sm:px-8 py-2.5 rounded-xl ${
+                  <span className={`font-display inline-block text-[12px] sm:text-[13px] font-bold uppercase tracking-[0.12em] px-6 sm:px-8 py-2.5 rounded-xl ${
                     finalData.score > 70 ? 'bg-blue-500/10 text-blue-500' : finalData.score > 40 ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'
                   }`}>
                     {finalData.sentiment}

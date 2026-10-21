@@ -2,29 +2,24 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { verifyNews } from '@/app/actions/verify';
-import { BatteryLow, CircleAlert, ImagePlus, Loader2, Moon, Newspaper, Sun, Video, Wrench } from 'lucide-react';
-import Link from 'next/link';
+import { BatteryLow, CircleAlert, ImagePlus, Loader2 } from 'lucide-react';
+import { SiteHeader, useTheme } from '@/components/SiteHeader';
 import { ResultView, type ResultData } from '@/components/ResultView';
 import { scoreOf, sentimentOf, getBand } from '@/lib/result';
 import { EmptyState } from '@/components/EmptyState';
 import { saveToHistory } from '@/lib/history';
 
-const isVideo = false;
 
 export default function Home() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ResultData | null>(null);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useTheme();
   const [status, setStatus] = useState<'idle' | 'success' | 'limit' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [reading, setReading] = useState(false);
   const autoRan = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark);
-  }, [isDark]);
 
   const handleVerify = async (override?: string) => {
     const query = (override ?? input).trim();
@@ -143,51 +138,7 @@ export default function Home() {
   return (
     <main className={`min-h-screen relative p-4 sm:p-6 lg:p-24 transition-colors duration-700 ${isDark ? 'bg-[#0A0A0B] text-white' : 'bg-[#F9FAFF] text-slate-900'}`}>
       <div className="max-w-7xl mx-auto">
-      <header className="mb-16 sm:mb-28 flex items-center justify-between gap-4 w-full">
-        <div className={`font-display flex items-center gap-2 whitespace-nowrap px-3 py-1.5 rounded-full border text-[12px] font-bold uppercase tracking-[0.12em] transition-all ${
-          isDark ? 'bg-white/5 border-white/15 text-slate-200' : 'bg-white border-slate-200 text-slate-700'
-        }`}>
-          <span className="w-2 h-2 rounded-full animate-pulse bg-blue-500" />
-          Verify News
-        </div>
-
-        <div className="flex items-center gap-4 sm:gap-8">
-          <nav className="flex gap-4 sm:gap-7">
-            {[
-              { href: '/', label: 'News', Icon: Newspaper, active: true },
-              { href: '/video', label: 'Videos', Icon: Video, active: false },
-              { href: '/tools', label: 'Tools', Icon: Wrench, active: false },
-            ].map(({ href, label, Icon, active }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`font-display flex items-center gap-1.5 text-[12px] sm:text-[13px] font-bold uppercase tracking-[0.12em] transition-all ${
-                  active
-                    ? (isDark ? 'text-white' : 'text-blue-700')
-                    : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')
-                }`}
-              >
-                <Icon className="hidden h-4 w-4 sm:block" aria-hidden />
-                {label}
-              </Link>
-            ))}
-          </nav>
-
-          <button
-            onClick={() => setIsDark(!isDark)}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            className={`relative flex items-center w-12 h-7 rounded-full border transition-all duration-500 ${
-              isDark ? 'bg-zinc-800 border-white/15' : 'bg-slate-200 border-slate-300'
-            }`}
-          >
-            <span className={`absolute flex h-5 w-5 items-center justify-center rounded-full transition-all duration-300 shadow-sm ${
-              isDark ? 'left-[24px] bg-blue-500 text-white' : 'left-[4px] bg-white text-amber-500'
-            }`}>
-              {isDark ? <Moon className="h-3 w-3" aria-hidden /> : <Sun className="h-3 w-3" aria-hidden />}
-            </span>
-          </button>
-        </div>
-      </header>
+      <SiteHeader isDark={isDark} onToggle={() => setIsDark(!isDark)} active="news" />
 
         <section className="mb-20 sm:mb-32">
           <h1 className={`font-display text-[3.5rem] leading-[1.1] sm:text-7xl md:text-[110px] font-bold tracking-tighter mb-10 sm:mb-16 ${isDark ? 'text-white' : 'text-slate-950'}`}>
