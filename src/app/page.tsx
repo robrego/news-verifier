@@ -5,7 +5,9 @@ import { verifyNews } from '@/app/actions/verify';
 import { Space_Grotesk } from 'next/font/google';
 import Link from 'next/link';
 import { ResultView, type ResultData } from '@/components/ResultView';
-import { scoreOf, sentimentOf } from '@/lib/result';
+import { scoreOf, sentimentOf, getBand } from '@/lib/result';
+import { EmptyState } from '@/components/EmptyState';
+import { saveToHistory } from '@/lib/history';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] });
 const isVideo = false;
@@ -22,13 +24,15 @@ export default function Home() {
     document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
 
-  const handleVerify = async () => {
-    if (!input) return;
+  const handleVerify = async (override?: string) => {
+    const query = (override ?? input).trim();
+    if (!query) return;
+    if (override) setInput(override);
     setLoading(true);
     setStatus('idle');
 
     try {
-      const response = await verifyNews(input);
+      const response = await verifyNews(query);
 
       if (!response.ok) {
         // Only a real quota problem gets the "limit" screen; everything else shows its own message.
@@ -45,7 +49,7 @@ export default function Home() {
       const resultText = response.text;
       const extractedScore = scoreOf(response.text);
 
-      setData({
+      const result: ResultData = {
         score: extractedScore,
         sentiment: sentimentOf(extractedScore),
         analysis: response.text,
@@ -53,7 +57,12 @@ export default function Home() {
         degraded: response.degraded,
         notice: response.notice,
         share: response.share,
-      });
+      };
+      setData(result);
+      const band = getBand(result);
+      if (response.share && band) {
+        saveToHistory({ q: query.slice(0, 200), label: band.label, share: response.share, ts: Date.now() });
+      }
 
       setStatus('success');
     } catch (error) {
@@ -132,7 +141,7 @@ export default function Home() {
                     }
                   }} 
                   onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
-                  placeholder="Paste an article URL..." 
+                  placeholder="Paste a headline, a claim or an article link..." 
                   className="w-full pl-6 pr-6 py-4 sm:px-8 outline-none font-medium text-lg sm:text-xl bg-transparent" 
                 />
               </div>
@@ -146,7 +155,7 @@ export default function Home() {
                 </button>
               ) : (
                 <button 
-                  onClick={handleVerify} 
+                  onClick={() => handleVerify()} 
                   disabled={loading || !input} 
                   className={`w-full sm:w-auto h-[60px] sm:h-[68px] px-8 sm:px-12 rounded-2xl font-bold uppercase text-[14px] sm:text-[15px] tracking-[0.15em] transition-all active:scale-95 flex-shrink-0 ${isDark ? 'bg-blue-500 text-white hover:bg-blue-400 disabled:bg-blue-500/50' : 'bg-slate-950 text-white hover:bg-blue-500 disabled:bg-slate-400'}`}
                 >
@@ -179,6 +188,8 @@ export default function Home() {
             )}
           </div>
         </section>
+
+        {!data && !loading && status === 'idle' && <EmptyState isDark={isDark} onPick={(t) => handleVerify(t)} />}
 
         {data && status !== 'limit' && status !== 'error' && <ResultView data={data} isDark={isDark} />}
       </div>
