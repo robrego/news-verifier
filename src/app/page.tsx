@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { verifyNews } from '@/app/actions/verify';
 import { Space_Grotesk } from 'next/font/google';
 import Link from 'next/link';
@@ -19,6 +19,9 @@ export default function Home() {
   const [isDark, setIsDark] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'limit' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [reading, setReading] = useState(false);
+  const autoRan = useRef(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
@@ -57,6 +60,7 @@ export default function Home() {
         degraded: response.degraded,
         notice: response.notice,
         share: response.share,
+        query: /^https?:\/\//i.test(query) ? undefined : query,
       };
       setData(result);
       const band = getBand(result);
@@ -71,6 +75,62 @@ export default function Home() {
       setStatus('error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Links like /?q=... (bookmarklet, share sheet, direct links) run the check straight away.
+  useEffect(() => {
+    if (autoRan.current) return;
+    autoRan.current = true;
+    const p = new URLSearchParams(window.location.search);
+    const q = (p.get('q') || p.get('url') || p.get('text') || p.get('title') || '').trim();
+    if (q) {
+      window.history.replaceState(null, '', window.location.pathname);
+      handleVerify(q.slice(0, 2000));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Shrinks big screenshots in the browser so uploads stay small and fast.
+  const prepareImage = async (file: File): Promise<Blob> => {
+    try {
+      const bmp = await createImageBitmap(file);
+      const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bmp.width * scale);
+      canvas.height = Math.round(bmp.height * scale);
+      canvas.getContext('2d')?.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.85));
+      return blob ?? file;
+    } catch {
+      return file;
+    }
+  };
+
+  const handleImage = async (file: File | undefined | null) => {
+    if (!file || reading) return;
+    setReading(true);
+    setStatus('idle');
+    setData(null);
+    try {
+      const blob = await prepareImage(file);
+      const form = new FormData();
+      form.append('image', blob, 'screenshot.jpg');
+      const res = await fetch('/api/extract', { method: 'POST', body: form });
+      const body = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+      if (!res.ok || !body.text) {
+        setErrorMessage(body.error ?? 'Could not read that screenshot. Try pasting the text instead.');
+        setStatus('error');
+        return;
+      }
+      setReading(false);
+      await handleVerify(body.text);
+    } catch {
+      setErrorMessage('Could not upload that screenshot. Check your connection and try again.');
+      setStatus('error');
+    } finally {
+      setReading(false);
+      if (fileRef.current) fileRef.current.value = '';
     }
   };
 
@@ -105,6 +165,9 @@ export default function Home() {
         isVideo ? (isDark ? 'text-white' : 'text-purple-600') : (isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500')
       }`}>
         Videos
+      </Link>
+      <Link href="/tools" className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-all ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'}`}>
+        Tools
       </Link>
     </nav>
 
@@ -141,6 +204,13 @@ export default function Home() {
                     }
                   }} 
                   onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+                  onPaste={(e) => {
+                    const img = Array.from(e.clipboardData.files).find((f) => f.type.startsWith('image/'));
+                    if (img) {
+                      e.preventDefault();
+                      handleImage(img);
+                    }
+                  }}
                   placeholder="Paste a headline, a claim or an article link..." 
                   className="w-full pl-6 pr-6 py-4 sm:px-8 outline-none font-medium text-lg sm:text-xl bg-transparent" 
                 />
@@ -167,6 +237,17 @@ export default function Home() {
             <p className={`mt-4 sm:mt-5 text-center text-[11px] sm:text-[12px] font-medium tracking-wide ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
               Verify News can make mistakes. Always check critical information.
             </p>
+
+            <div className="mt-3 flex justify-center">
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => handleImage(e.target.files?.[0])} />
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={reading || loading}
+                className={`text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.15em] underline-offset-4 hover:underline disabled:opacity-50 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}
+              >
+                {reading ? 'Reading screenshot...' : 'Or check a screenshot of a post'}
+              </button>
+            </div>
 
             {status === 'error' && (
               <div role="alert" className={`mt-8 p-6 sm:p-8 rounded-[1.5rem] border ${isDark ? 'bg-rose-500/10 border-rose-500/20 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-800 shadow-sm'}`}>

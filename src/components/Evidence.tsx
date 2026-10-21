@@ -1,6 +1,7 @@
 'use client';
 
 import type { Evidence } from '@/lib/search';
+import { loadedWording } from '@/lib/headline';
 
 type Tier = 'established' | 'reference' | 'tabloid' | 'satire' | 'unknown';
 
@@ -84,6 +85,12 @@ export function EvidenceRail({ evidence, isDark, wide = false }: { evidence: Evi
                   <Badge tier={s.reputation.tier} isDark={isDark} title={s.reputation.label} />
                 </div>
                 <p className={`mt-3 text-[14px] font-medium leading-snug line-clamp-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{s.title}</p>
+                {(() => {
+                  const loaded = loadedWording(s.title);
+                  return loaded.length > 0 ? (
+                    <p className={`mt-2 text-[11px] font-bold uppercase tracking-[0.1em] ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Loaded wording: {loaded.slice(0, 2).join(', ')}</p>
+                  ) : null;
+                })()}
                 {s.description && (
                   <p className={`mt-2 text-[13px] leading-relaxed line-clamp-3 ${muted}`}>{s.description}</p>
                 )}

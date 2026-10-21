@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { EvidenceRail } from '@/components/Evidence';
 import type { Evidence } from '@/lib/search';
+import { checkWording } from '@/lib/headline';
 
 export type ResultData = {
   score: number;
@@ -12,6 +13,7 @@ export type ResultData = {
   degraded?: boolean;
   notice?: string;
   share?: string;
+  query?: string;
 };
 
 import type { Tone } from '@/lib/result';
@@ -192,6 +194,7 @@ export function ResultView({ data, isDark }: { data: ResultData; isDark: boolean
   const muted = isDark ? 'text-slate-400' : 'text-slate-500';
   const analysisNode = data.degraded ? null : renderParsedAnalysis(data.analysis, isDark, evidence ? hide : /sources investigated$/);
   const showAnalysis = analysisNode !== null;
+  const wording = data.query && !data.degraded ? checkWording(data.query) : [];
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-12 duration-1000">
@@ -218,6 +221,21 @@ export function ResultView({ data, isDark }: { data: ResultData; isDark: boolean
           <p className={`mt-6 max-w-3xl text-xl sm:text-2xl font-medium leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
             {summary}
           </p>
+        )}
+
+        {wording.length > 0 && (
+          <div className="mt-6 flex flex-wrap items-center gap-2" aria-label="Wording check">
+            <span className={`text-[11px] font-bold uppercase tracking-[0.2em] ${muted}`}>Wording check</span>
+            {wording.map((f) => (
+              <span
+                key={f.kind}
+                title={f.kind === 'absolute' ? 'Claims that say always, never or everyone are rarely fully true.' : 'Emotional or shouting language is common in misleading posts. It says nothing about whether the claim is true.'}
+                className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${isDark ? 'border-amber-500/20 bg-amber-500/10 text-amber-300' : 'border-amber-100 bg-amber-50 text-amber-700'}`}
+              >
+                {f.kind === 'loaded' || f.kind === 'absolute' ? `${f.label}: ${f.hits.join(', ')}` : f.label}
+              </span>
+            ))}
+          </div>
         )}
 
         {data.degraded ? (

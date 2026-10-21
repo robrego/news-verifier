@@ -55,7 +55,7 @@ export default async function SharedResultPage({ params }: Props) {
     <SharedShell
       query={shared.query}
       checkedAt={checkedAt}
-      data={{ score, sentiment: sentimentOf(score), analysis: shared.text, evidence: shared.evidence }}
+      data={{ score, sentiment: sentimentOf(score), analysis: shared.text, evidence: shared.evidence, query: /^https?:\/\//i.test(shared.query) ? undefined : shared.query }}
     />
   );
 }

@@ -3,13 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { clearHistory, loadHistory, type HistoryItem } from '@/lib/history';
-
-const EXAMPLES = [
-  { tag: 'Popular myth', text: 'Humans only use 10% of their brain', note: 'A classic that sounds true' },
-  { tag: 'Space', text: 'The Great Wall of China is visible from space with the naked eye', note: 'Check what the sources say' },
-  { tag: 'Satire', text: 'https://www.theonion.com/', note: 'Spots parody sites instantly' },
-  { tag: 'Health', text: 'Cracking your knuckles causes arthritis', note: 'Often backed by fact-checks' },
-];
+import { dailyExamples, todayIndex, SATIRE_EXAMPLE, type Example } from '@/lib/examples';
 
 const STEPS = [
   { n: '1', title: 'Paste', body: 'A headline, a claim, or a link to an article.' },
@@ -19,7 +13,12 @@ const STEPS = [
 
 export function EmptyState({ isDark, onPick }: { isDark: boolean; onPick: (text: string) => void }) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  useEffect(() => setHistory(loadHistory()), []);
+  // Server and first client render use day 0, then the real day is applied, so there is no hydration mismatch.
+  const [examples, setExamples] = useState<Example[]>(() => [...dailyExamples(0), SATIRE_EXAMPLE]);
+  useEffect(() => {
+    setHistory(loadHistory());
+    setExamples([...dailyExamples(todayIndex()), SATIRE_EXAMPLE]);
+  }, []);
 
   const muted = isDark ? 'text-slate-400' : 'text-slate-500';
   const card = isDark
@@ -29,15 +28,15 @@ export function EmptyState({ isDark, onPick }: { isDark: boolean; onPick: (text:
   return (
     <div className="space-y-16 sm:space-y-24">
       <section aria-label="Try an example">
-        <h2 className={`mb-5 text-[11px] font-bold uppercase tracking-[0.2em] ${muted}`}>Not sure where to start? Try one</h2>
+        <h2 className={`mb-5 text-[11px] font-bold uppercase tracking-[0.2em] ${muted}`}>Not sure where to start? Try one (new ones daily)</h2>
         <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {EXAMPLES.map((e) => (
+          {examples.map((e, i) => (
             <button
               key={e.text}
               onClick={() => onPick(e.text)}
               className={`flex flex-col items-start justify-start text-left rounded-2xl border p-5 sm:p-6 transition-all active:scale-[0.98] ${card}`}
             >
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-500">{e.tag}</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-500">{i === 0 ? `Claim of the day · ${e.tag}` : e.tag}</span>
               <span className={`mt-3 block text-[15px] font-medium leading-snug break-words ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 {e.text.startsWith('http') ? new URL(e.text).hostname.replace('www.', '') : `“${e.text}”`}
               </span>
