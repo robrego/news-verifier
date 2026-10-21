@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BadgeCheck, ChartColumn, CircleCheck, CircleHelp, Laugh, Link2, MessageSquareWarning, Scale, SearchX, Share2, Check, TriangleAlert, Circle, type LucideIcon } from 'lucide-react';
+import { ChartColumn, CircleCheck, Link2, MessageSquareWarning, Scale, Share2, Check, TriangleAlert, Circle, type LucideIcon } from 'lucide-react';
 import { EvidenceRail } from '@/components/Evidence';
 import type { Evidence } from '@/lib/search';
 import { checkWording } from '@/lib/headline';
@@ -25,14 +25,6 @@ const TONE: Record<Tone, { text: string; bar: string }> = {
   amber: { text: 'text-amber-500', bar: 'bg-amber-400' },
   rose: { text: 'text-rose-500', bar: 'bg-rose-500' },
   slate: { text: 'text-slate-400', bar: 'bg-slate-400' },
-};
-
-const BAND_ICON: Record<string, LucideIcon> = {
-  'Well supported': BadgeCheck,
-  'Mixed or unclear': CircleHelp,
-  'Likely false or misleading': TriangleAlert,
-  'Not enough evidence': SearchX,
-  Satire: Laugh,
 };
 
 // Splits text at periods and adds paragraph spacing.
@@ -221,13 +213,7 @@ export function ResultView({ data, isDark }: { data: ResultData; isDark: boolean
         </div>
 
         {band && tone ? (
-          <div className={`font-display mt-4 flex items-center gap-3 sm:gap-4 text-4xl sm:text-6xl font-bold leading-[1.05] tracking-tight ${tone.text}`}>
-            {(() => {
-              const BandIcon = BAND_ICON[band.label];
-              return BandIcon ? <BandIcon className="h-9 w-9 sm:h-14 sm:w-14 shrink-0" strokeWidth={2.25} aria-hidden /> : null;
-            })()}
-            {band.label}
-          </div>
+          <div className={`font-display mt-3 text-2xl sm:text-4xl font-bold leading-tight tracking-tight ${tone.text}`}>{band.label}</div>
         ) : (
           <div className={`font-display mt-4 text-3xl sm:text-5xl font-bold leading-[1.05] tracking-tight ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>
             Review the sources
