@@ -41,16 +41,12 @@ const ITEMS: { key: NavKey; href: string; label: string; Icon: typeof Newspaper;
 
 // The same top menu on every page: brand badge, section links, dark mode switch.
 export function SiteHeader({ isDark, onToggle, active }: { isDark: boolean; onToggle: () => void; active: NavKey }) {
-  const dot = active === 'video' ? 'bg-purple-500' : 'bg-blue-500';
   return (
     <header className="mb-16 sm:mb-28 flex w-full items-center justify-between gap-4">
       <Link
         href="/"
-        className={`font-display flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.12em] transition-all ${
-          isDark ? 'border-white/15 bg-white/5 text-slate-200' : 'border-slate-200 bg-white text-slate-700'
-        }`}
+        className={`font-display whitespace-nowrap text-[15px] font-bold uppercase tracking-[0.12em] ${isDark ? 'text-white' : 'text-slate-900'}`}
       >
-        <span className={`h-2 w-2 animate-pulse rounded-full ${dot}`} />
         Verify News
       </Link>
 
