@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import MadeByR from "@/components/MadeByR";
 // 1. Import the Analytics component
 import { Analytics } from "@vercel/analytics/react";
 
@@ -38,6 +39,9 @@ export default function RootLayout({
         <main>
           {children}
         </main>
+        <footer className="flex justify-center px-4 py-6 text-xs text-slate-500">
+          <MadeByR />
+        </footer>
         <Analytics />
       </body>
     </html>
