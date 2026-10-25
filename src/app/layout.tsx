@@ -39,8 +39,10 @@ export default function RootLayout({
         <main>
           {children}
         </main>
-        <footer className="flex justify-center px-4 py-6 text-xs text-slate-500">
-          <MadeByR />
+        <footer className="px-4 pb-8 pt-6 text-xs text-slate-500 sm:px-6 lg:px-24">
+          <div className="mx-auto max-w-7xl">
+            <MadeByR />
+          </div>
         </footer>
         <Analytics />
       </body>
