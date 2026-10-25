@@ -55,3 +55,14 @@ body {
 .animate-in.slide-in-from-top-4 {
   animation: animate-in-top 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+/* The layout footer sits below each page, so the body behind it must follow the page theme. */
+body {
+  background-color: #F9FAFF;
+  transition: background-color 0.7s;
+}
+html.dark body {
+  background-color: #0A0A0B;
+}
+html.dark body > footer {
+  color: #94a3b8;
+}
